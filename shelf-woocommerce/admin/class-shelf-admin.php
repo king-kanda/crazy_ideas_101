@@ -122,7 +122,7 @@ class Shelf_Admin {
             'shelf-admin',
             'SHELF_ADMIN',
             [
-                'api_url'  => SHELF_API_URL,
+                'api_url'  => Shelf_API::get_api_url(),
                 'api_key'  => Shelf_API::get_api_key(),
                 'store_id' => Shelf_API::get_store_id(),
                 'nonce'    => wp_create_nonce( 'shelf_admin' ),
@@ -150,11 +150,13 @@ class Shelf_Admin {
 
         // Sanitise and save each option.
         $api_key  = isset( $_POST['shelf_api_key'] )           ? sanitize_text_field( wp_unslash( $_POST['shelf_api_key'] ) )           : '';
+        $api_url  = isset( $_POST['shelf_api_url'] )           ? esc_url_raw( wp_unslash( $_POST['shelf_api_url'] ) )                   : '';
         $niche    = isset( $_POST['shelf_niche'] )             ? sanitize_text_field( wp_unslash( $_POST['shelf_niche'] ) )             : '';
         $country  = isset( $_POST['shelf_location_country'] )  ? sanitize_text_field( wp_unslash( $_POST['shelf_location_country'] ) )  : '';
         $city     = isset( $_POST['shelf_location_city'] )     ? sanitize_text_field( wp_unslash( $_POST['shelf_location_city'] ) )     : '';
 
         update_option( 'shelf_api_key',          $api_key );
+        update_option( 'shelf_api_url',          $api_url ?: SHELF_API_URL );
         update_option( 'shelf_niche',            $niche );
         update_option( 'shelf_location_country', $country );
         update_option( 'shelf_location_city',    $city );

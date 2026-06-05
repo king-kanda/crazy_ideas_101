@@ -10,7 +10,6 @@ import { getAuth, saveAuth } from '@/lib/auth';
 interface StoreDetails {
   storeName: string;
   storeUrl: string;
-  platform: 'woocommerce';
   niche: string;
   country: string;
   city: string;
@@ -35,7 +34,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: `1px solid ${isActive ? 'var(--accent)' : isDone ? 'var(--accent)' : 'var(--border)'}`,
-                background: isActive ? 'var(--accent)' : isDone ? 'transparent' : 'transparent',
+                background: isActive ? 'var(--accent)' : 'transparent',
                 color: isActive ? '#000' : isDone ? 'var(--accent)' : 'var(--text-muted)',
                 fontSize: 11,
                 fontWeight: 700,
@@ -74,22 +73,53 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 
 // ── Step 1: Store Details ──────────────────────────────────────
 
-function Step1({
-  onNext,
-  initial,
-}: {
-  onNext: (d: StoreDetails) => void;
-  initial: StoreDetails;
-}) {
-  const [form, setForm] = useState<StoreDetails>(initial);
+function Step1({ onNext }: { onNext: () => void }) {
+  const [form, setForm] = useState<StoreDetails>({
+    storeName: '',
+    storeUrl: '',
+    niche: '',
+    country: '',
+    city: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   function set(key: keyof StoreDetails, val: string) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onNext(form);
+    setError('');
+
+    const email = sessionStorage.getItem('shelf_pending_email');
+    const password = sessionStorage.getItem('shelf_pending_password');
+
+    if (!email || !password) {
+      setError('Session expired. Please go back and sign up again.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.signup({
+        email,
+        password,
+        store_name: form.storeName,
+        store_url: form.storeUrl,
+        niche: form.niche || undefined,
+        location_country: form.country || undefined,
+        location_city: form.city || undefined,
+      });
+      saveAuth(res.token, res.apiKey, res.storeId);
+      sessionStorage.removeItem('shelf_pending_email');
+      sessionStorage.removeItem('shelf_pending_password');
+      onNext();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not create account. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const niches = ['Electronics', 'Fashion', 'Furniture', 'Beauty', 'Food', 'Other'];
@@ -106,6 +136,7 @@ function Step1({
           value={form.storeName}
           onChange={(e) => set('storeName', e.target.value)}
           required
+          disabled={loading}
         />
       </div>
 
@@ -120,6 +151,7 @@ function Step1({
           value={form.storeUrl}
           onChange={(e) => set('storeUrl', e.target.value)}
           required
+          disabled={loading}
         />
       </div>
 
@@ -128,7 +160,6 @@ function Step1({
           Platform
         </label>
         <div style={{ display: 'flex', gap: 12 }}>
-          {/* WooCommerce — active */}
           <label
             style={{
               display: 'flex',
@@ -152,7 +183,6 @@ function Step1({
             />
             WooCommerce
           </label>
-          {/* Shopify — disabled */}
           <div
             style={{
               display: 'flex',
@@ -163,7 +193,6 @@ function Step1({
               opacity: 0.45,
               fontSize: 13,
               color: 'var(--text-muted)',
-              position: 'relative',
               cursor: 'not-allowed',
             }}
           >
@@ -196,6 +225,7 @@ function Step1({
           value={form.niche}
           onChange={(e) => set('niche', e.target.value)}
           required
+          disabled={loading}
         >
           <option value="" disabled>
             Select niche…
@@ -215,11 +245,11 @@ function Step1({
           </label>
           <input
             className="input-field"
-            placeholder="US"
+            placeholder="KE"
             maxLength={3}
             value={form.country}
             onChange={(e) => set('country', e.target.value.toUpperCase())}
-            required
+            disabled={loading}
           />
         </div>
         <div>
@@ -228,19 +258,35 @@ function Step1({
           </label>
           <input
             className="input-field"
-            placeholder="New York"
+            placeholder="Nairobi"
             value={form.city}
             onChange={(e) => set('city', e.target.value)}
+            disabled={loading}
           />
         </div>
       </div>
 
+      {error && (
+        <div
+          style={{
+            padding: '10px 14px',
+            border: '1px solid var(--danger)',
+            background: 'rgba(239,68,68,0.08)',
+            color: 'var(--danger)',
+            fontSize: 12,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       <button
         type="submit"
         className="btn-primary"
+        disabled={loading}
         style={{ width: '100%', padding: '12px 20px', marginTop: 8 }}
       >
-        CONTINUE →
+        {loading ? 'CREATING ACCOUNT...' : 'CONTINUE →'}
       </button>
     </form>
   );
@@ -293,18 +339,9 @@ function Step2({ onNext }: { onNext: () => void }) {
         </a>
       ),
     },
-    {
-      num: 2,
-      text: 'Go to WP Admin → Plugins → Add New → Upload Plugin',
-    },
-    {
-      num: 3,
-      text: 'Activate the plugin, then navigate to Shelf → Settings',
-    },
-    {
-      num: 4,
-      text: 'Paste your API key below into the settings field and click Save',
-    },
+    { num: 2, text: 'Go to WP Admin → Plugins → Add New → Upload Plugin' },
+    { num: 3, text: 'Activate the plugin, then navigate to Shelf → Settings' },
+    { num: 4, text: 'Paste your API key into the settings field and click Save' },
   ];
 
   return (
@@ -510,18 +547,8 @@ function Step3() {
 
 // ── Wizard shell ───────────────────────────────────────────────
 
-const DEFAULT_STORE: StoreDetails = {
-  storeName: '',
-  storeUrl: '',
-  platform: 'woocommerce',
-  niche: '',
-  country: '',
-  city: '',
-};
-
 export default function OnboardingWizard() {
   const [step, setStep] = useState(1);
-  const [storeDetails, setStoreDetails] = useState<StoreDetails>(DEFAULT_STORE);
 
   const stepLabels = ['Store Details', 'Plugin Setup', 'Confirmation'];
 
@@ -566,7 +593,7 @@ export default function OnboardingWizard() {
         {/* Step indicator */}
         <StepIndicator current={step} total={3} />
 
-        {/* Step title */}
+        {/* Step card */}
         <div className="card" style={{ padding: 32 }}>
           <h2
             style={{
@@ -582,15 +609,7 @@ export default function OnboardingWizard() {
             {stepLabels[step - 1]}
           </h2>
 
-          {step === 1 && (
-            <Step1
-              initial={storeDetails}
-              onNext={(d) => {
-                setStoreDetails(d);
-                setStep(2);
-              }}
-            />
-          )}
+          {step === 1 && <Step1 onNext={() => setStep(2)} />}
           {step === 2 && <Step2 onNext={() => setStep(3)} />}
           {step === 3 && <Step3 />}
         </div>

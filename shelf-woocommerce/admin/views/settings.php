@@ -8,6 +8,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 $api_key  = get_option( 'shelf_api_key', '' );
+$api_url  = get_option( 'shelf_api_url', SHELF_API_URL );
 $niche    = get_option( 'shelf_niche', '' );
 $country  = get_option( 'shelf_location_country', '' );
 $city     = get_option( 'shelf_location_city', '' );
@@ -62,6 +63,27 @@ $niches = [
 
             <table class="form-table shelf-form-table" role="presentation">
                 <tbody>
+                    <tr>
+                        <th scope="row">
+                            <label for="shelf_api_url">
+                                <?php esc_html_e( 'API URL', 'shelf-woocommerce' ); ?>
+                            </label>
+                        </th>
+                        <td>
+                            <input
+                                type="url"
+                                id="shelf_api_url"
+                                name="shelf_api_url"
+                                value="<?php echo esc_attr( $api_url ); ?>"
+                                class="regular-text"
+                                placeholder="https://api.shelf.io"
+                            >
+                            <p class="description">
+                                <?php esc_html_e( 'Leave as-is for production. Set to http://localhost:8000 for local development.', 'shelf-woocommerce' ); ?>
+                            </p>
+                        </td>
+                    </tr>
+
                     <tr>
                         <th scope="row">
                             <label for="shelf_api_key">

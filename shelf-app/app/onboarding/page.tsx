@@ -9,7 +9,11 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated()) router.replace('/login');
+    // Allow new signups (pending creds in sessionStorage) and already-authenticated users
+    const hasPendingSignup =
+      sessionStorage.getItem('shelf_pending_email') &&
+      sessionStorage.getItem('shelf_pending_password');
+    if (!isAuthenticated() && !hasPendingSignup) router.replace('/signup');
   }, [router]);
 
   return <OnboardingWizard />;

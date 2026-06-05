@@ -5,7 +5,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export interface SignupData {
   email: string;
   password: string;
-  storeName?: string;
+  store_name: string;
+  store_url: string;
+  niche?: string;
+  location_country?: string;
+  location_city?: string;
 }
 
 export interface LoginData {
@@ -19,7 +23,12 @@ export interface AuthResponse {
   token: string;
   apiKey: string;
   storeId: string;
-  email: string;
+}
+
+interface RawAuthResponse {
+  token: string;
+  api_key: string;
+  store_id: string;
 }
 
 export interface VerifyResponse {
@@ -120,11 +129,13 @@ export async function apiFetch<T>(
 // ── API surface ────────────────────────────────────────────────
 
 export const api = {
-  signup: (data: SignupData) =>
-    apiFetch<AuthResponse>('/auth/signup', {
+  signup: async (data: SignupData): Promise<AuthResponse> => {
+    const raw = await apiFetch<RawAuthResponse>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
+    });
+    return { token: raw.token, apiKey: raw.api_key, storeId: raw.store_id };
+  },
 
   login: (data: LoginData) =>
     apiFetch<AuthResponse>('/auth/login', {

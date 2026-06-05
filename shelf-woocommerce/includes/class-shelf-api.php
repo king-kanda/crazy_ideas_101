@@ -30,6 +30,15 @@ class Shelf_API {
     }
 
     /**
+     * Return the configured API base URL, falling back to the compile-time constant.
+     *
+     * @return string
+     */
+    public static function get_api_url(): string {
+        return rtrim( (string) get_option( 'shelf_api_url', SHELF_API_URL ), '/' );
+    }
+
+    /**
      * POST JSON data to a Shelf API endpoint.
      *
      * @param string $endpoint  e.g. '/ingest/products'
@@ -42,7 +51,7 @@ class Shelf_API {
             return [ 'error' => 'API key is not configured.' ];
         }
 
-        $url      = rtrim( SHELF_API_URL, '/' ) . '/' . ltrim( $endpoint, '/' );
+        $url      = self::get_api_url() . '/' . ltrim( $endpoint, '/' );
         $response = wp_remote_post(
             $url,
             [
@@ -75,7 +84,7 @@ class Shelf_API {
             return [ 'error' => 'API key is not configured.' ];
         }
 
-        $url      = rtrim( SHELF_API_URL, '/' ) . '/' . ltrim( $endpoint, '/' );
+        $url      = self::get_api_url() . '/' . ltrim( $endpoint, '/' );
         $response = wp_remote_get(
             $url,
             [

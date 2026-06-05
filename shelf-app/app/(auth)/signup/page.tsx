@@ -3,8 +3,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/lib/api';
-import { saveAuth, isAuthenticated } from '@/lib/auth';
+import { isAuthenticated } from '@/lib/auth';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -12,13 +11,12 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated()) router.replace('/dashboard');
   }, [router]);
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
 
@@ -31,16 +29,9 @@ export default function SignupPage() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const res = await api.signup({ email, password });
-      saveAuth(res.token, res.apiKey, res.storeId);
-      router.push('/onboarding');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Signup failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    sessionStorage.setItem('shelf_pending_email', email);
+    sessionStorage.setItem('shelf_pending_password', password);
+    router.push('/onboarding');
   }
 
   return (
@@ -88,12 +79,15 @@ export default function SignupPage() {
               fontFamily: 'Syne, sans-serif',
               fontSize: 18,
               fontWeight: 700,
-              marginBottom: 24,
+              marginBottom: 4,
               color: 'var(--text)',
             }}
           >
             Create Account
           </h2>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 24 }}>
+            You'll set up your store details on the next step.
+          </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
@@ -146,10 +140,9 @@ export default function SignupPage() {
             <button
               type="submit"
               className="btn-primary"
-              disabled={loading}
               style={{ width: '100%', marginTop: 8, padding: '12px 20px' }}
             >
-              {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
+              CONTINUE →
             </button>
           </form>
         </div>
