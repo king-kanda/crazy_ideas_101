@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+alembic
+celery[redis]
+redis
+pytrends
+groq
+python-dotenv
+pydantic[email]
+python-jose[cryptography]
+passlib[bcrypt]
