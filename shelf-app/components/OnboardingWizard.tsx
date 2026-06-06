@@ -331,7 +331,9 @@ function Step2({ onNext }: { onNext: () => void }) {
       text: 'Download the Shelf plugin',
       extra: (
         <a
-          href="/api/plugin-download"
+          href="https://github.com/king-kanda/crazy_ideas_101/blob/claude/inspiring-lamport-OoZhC/shelf-woocommerce.zip"
+          target="_blank"
+          rel="noopener noreferrer"
           className="btn-outline"
           style={{ display: 'inline-flex', padding: '6px 14px', fontSize: 11, marginTop: 8 }}
         >
