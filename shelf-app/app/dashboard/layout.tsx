@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { isAuthenticated, getAuth, clearAuth } from '@/lib/auth';
+import ThemeToggle from '@/components/ThemeToggle';
 
 // ── Nav item data ──────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ function Sidebar({ storeName, lastSync }: { storeName: string; lastSync: string 
         left: 0,
         bottom: 0,
         width: 220,
-        background: '#0D0F16',
+        background: 'var(--sidebar)',
         borderRight: '1px solid var(--border)',
         display: 'flex',
         flexDirection: 'column',
@@ -233,7 +234,7 @@ function TopBar({ storeName, lastSync }: { storeName: string; lastSync: string }
       >
         {pageTitle}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20, fontSize: 11, color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: 'var(--text-muted)' }}>
         {lastSync && (
           <span>
             Last sync:{' '}
@@ -253,6 +254,7 @@ function TopBar({ storeName, lastSync }: { storeName: string; lastSync: string }
             {storeName}
           </span>
         )}
+        <ThemeToggle />
       </div>
     </div>
   );

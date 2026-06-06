@@ -90,12 +90,14 @@ Builds the app then starts the production server.
 
 ## 3. WordPress Plugin
 
+> **Testing requirement:** You need a live WordPress site with **WooCommerce 7.0+** installed to test the plugin. The plugin hooks into WooCommerce events (product views, searches, cart actions) and POSTs data to the central API — it cannot be tested without an actual WooCommerce store.
+
 1. Download **[shelf-woocommerce.zip](https://github.com/king-kanda/crazy_ideas_101/blob/claude/inspiring-lamport-OoZhC/shelf-woocommerce.zip)**
 2. In WP Admin go to **Plugins → Add New → Upload Plugin**
 3. Upload the zip and activate it
 4. Navigate to **Shelf → Settings** in the WP Admin sidebar
 5. Paste your API key (shown after onboarding) and click **Save**
-6. Set the **API URL** to wherever your `shelf-api` is hosted (defaults to `http://localhost:8000`)
+6. The API URL defaults to the live Heroku backend — change it only for local development
 
 ---
 

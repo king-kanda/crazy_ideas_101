@@ -1,5 +1,6 @@
 :root {
   --bg: #0F1117;
+  --sidebar: #0D0F16;
   --card: #13161F;
   --border: #1E2130;
   --accent: #F59E0B;
@@ -10,6 +11,18 @@
   --danger: #EF4444;
   --warning: #F97316;
   --success: #22C55E;
+  --row-hover: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="light"] {
+  --bg: #F8F9FB;
+  --sidebar: #EDEEF1;
+  --card: #FFFFFF;
+  --border: #E5E7EB;
+  --text: #111827;
+  --text-muted: #6B7280;
+  --text-faint: #9CA3AF;
+  --row-hover: rgba(0, 0, 0, 0.03);
 }
 
 *,
@@ -196,7 +209,7 @@ tr:last-child td {
   border-bottom: none;
 }
 tr:hover td {
-  background: rgba(255,255,255,0.02);
+  background: var(--row-hover);
 }
 
 .badge {
