@@ -136,6 +136,7 @@ class DemandInsights(BaseModel):
     top_searches: List[TopSearch]
     trend_keywords: List[TrendKeyword]
     gaps: List[DemandGap]
+    product_categories: List[str] = []
 
 
 # ── Insights: Store ───────────────────────────────────────────────────────────

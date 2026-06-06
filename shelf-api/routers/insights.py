@@ -7,7 +7,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from groq import Groq
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -56,12 +56,30 @@ async def demand_insights(store_id: str, db: AsyncSession = Depends(get_db)):
             TopSearch(query=row.query, count=row.count, zero_results=(row.min_results == 0))
         )
 
-    # Trend keywords from cache
+    # Current valid keywords = niche + active product categories
+    valid_keywords: set = set()
+    if store.niche:
+        valid_keywords.add(store.niche.lower())
+
+    cat_rows = await db.execute(
+        select(Product.category)
+        .where(Product.store_id == store.id, Product.category.isnot(None))
+        .distinct()
+    )
+    product_categories: List[str] = []
+    for row in cat_rows.all():
+        if row.category:
+            product_categories.append(row.category)
+            valid_keywords.add(row.category.lower())
+
+    # Trend keywords from cache — filtered to only current valid keywords
     trend_rows = await db.execute(
         select(TrendCache).where(TrendCache.store_id == store.id)
     )
     trend_keywords: List[TrendKeyword] = []
     for tc in trend_rows.scalars().all():
+        if valid_keywords and tc.keyword.lower() not in valid_keywords:
+            continue  # stale entry — skip it
         data = tc.trend_data or {}
         interest = data.get("interest", 0) if isinstance(data, dict) else 0
         trend_keywords.append(
@@ -124,7 +142,12 @@ async def demand_insights(store_id: str, db: AsyncSession = Depends(get_db)):
         except Exception:
             gaps = []
 
-    return DemandInsights(top_searches=top_searches, trend_keywords=trend_keywords, gaps=gaps)
+    return DemandInsights(
+        top_searches=top_searches,
+        trend_keywords=trend_keywords,
+        gaps=gaps,
+        product_categories=product_categories,
+    )
 
 
 # ── /insights/{store_id}/store ────────────────────────────────────────────────
@@ -318,6 +341,16 @@ async def refresh_demand(
     for row in cat_rows.all():
         if row.category and row.category not in keywords:
             keywords.append(row.category)
+
+    # Purge stale trend cache entries (keywords no longer in niche or product categories)
+    if keywords:
+        await db.execute(
+            sql_delete(TrendCache).where(
+                TrendCache.store_id == store.id,
+                TrendCache.keyword.not_in(keywords),
+            )
+        )
+        await db.commit()
 
     # Refresh trend cache synchronously
     if keywords:

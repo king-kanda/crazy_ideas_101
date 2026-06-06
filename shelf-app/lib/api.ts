@@ -79,6 +79,7 @@ export interface DemandResponse {
   topSearches: SearchQuery[];
   trendingKeywords: TrendingKeyword[];
   demandGaps: DemandGap[];
+  productCategories: string[];
   generatedAt: string;
 }
 
@@ -210,6 +211,7 @@ export const api = {
         category: g.category as string | undefined,
         action:   g.action as string | undefined,
       })),
+      productCategories: (raw.product_categories ?? []) as string[],
       generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
     };
   },
@@ -293,6 +295,7 @@ export const api = {
       topSearches: searches.map((s) => ({ query: s.query as string, count: s.count as number, zeroResults: s.zero_results as boolean })),
       trendingKeywords: trends.map((t) => ({ keyword: t.keyword as string, score: (t.interest ?? 0) as number, delta: 0 })),
       demandGaps: gaps.map((g, i) => ({ id: (g.id ?? String(i)) as string, signal: g.signal as string, severity: g.severity as 'high' | 'medium' | 'low', category: g.category as string | undefined, action: g.action as string | undefined })),
+      productCategories: (raw.product_categories ?? []) as string[],
       generatedAt: new Date().toISOString(),
     };
   },

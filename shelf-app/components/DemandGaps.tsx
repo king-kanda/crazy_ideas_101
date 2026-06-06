@@ -8,6 +8,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
+  Legend,
 } from 'recharts';
 import type { DemandResponse } from '@/lib/api';
 import GapAlert from './GapAlert';
@@ -17,17 +19,13 @@ interface Props {
   data: DemandResponse;
 }
 
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', padding: '8px 12px', fontSize: 12, color: 'var(--text)' }}>
-      <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
-      <div>Interest: <span style={{ color: 'var(--accent)' }}>{payload[0].value}</span></div>
-    </div>
-  );
-}
-
 type StockStatus = 'STOCKED' | 'GAP' | 'OPPORTUNITY';
+
+const STATUS_COLOR: Record<StockStatus, string> = {
+  STOCKED:     '#22c55e',
+  GAP:         '#ef4444',
+  OPPORTUNITY: '#f59e0b',
+};
 
 const STATUS_STYLE: Record<StockStatus, { color: string; bg: string; border: string }> = {
   STOCKED:     { color: 'var(--success)',  bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.3)' },
@@ -35,18 +33,39 @@ const STATUS_STYLE: Record<StockStatus, { color: string; bg: string; border: str
   OPPORTUNITY: { color: 'var(--accent)',   bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.3)' },
 };
 
-export default function DemandGaps({ data }: Props) {
-  const { topSearches = [], trendingKeywords = [], demandGaps = [] } = data ?? {};
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', padding: '8px 12px', fontSize: 12, color: 'var(--text)', minWidth: 160 }}>
+      <div style={{ color: 'var(--text-muted)', marginBottom: 6, fontWeight: 500 }}>{label}</div>
+      {payload.map((p) => (
+        <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 2 }}>
+          <span style={{ color: 'var(--text-muted)' }}>{p.name}</span>
+          <span style={{ color: p.color, fontFamily: 'DM Mono, monospace' }}>{p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  // ── Build Trends vs Stock cross-reference ───────────────────
+export default function DemandGaps({ data }: Props) {
+  const { topSearches = [], trendingKeywords = [], demandGaps = [], productCategories = [] } = data ?? {};
+
+  // Trend keywords come from niche + product categories — they ARE in your catalog.
+  // Status reflects the buyer search signal, not catalog membership:
+  //   STOCKED:     buyers are actively searching AND finding results → good coverage
+  //   GAP:         buyers search for this category but get zero results → listing/stock issue
+  //   OPPORTUNITY: trending on Google, no buyer searches yet → needs promotion/SEO
+  const categorySet = new Set(productCategories.map((c) => c.toLowerCase()));
+
   const trendStockRows = trendingKeywords.map((kw) => {
-    const match = topSearches.find(
-      (s) =>
-        s.query.toLowerCase().includes(kw.keyword.toLowerCase()) ||
-        kw.keyword.toLowerCase().split(' ').some((word) =>
-          word.length > 3 && s.query.toLowerCase().includes(word)
-        )
-    );
+    // Match: any search query that shares a meaningful word with this keyword
+    const kwWords = kw.keyword.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+    const match = topSearches.find((s) => {
+      const q = s.query.toLowerCase();
+      return q.includes(kw.keyword.toLowerCase()) || kwWords.some((w) => q.includes(w));
+    });
+
     let status: StockStatus;
     if (!match) {
       status = 'OPPORTUNITY';
@@ -151,7 +170,7 @@ export default function DemandGaps({ data }: Props) {
           <div className="section-header">
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             Google Trends vs Your Stock
-            <Tooltip text="Compares Google Trends interest data with your store's search results. STOCKED = trending and in your catalog. GAP = trending, buyers searched, no results. OPPORTUNITY = trending on Google but not yet searched here." />
+            <Tooltip text="Keywords come from your niche + product categories — so they are in your catalog. STOCKED = buyers find them when they search. GAP = buyers search but get zero results (stock/listing issue). OPPORTUNITY = trending but buyers haven't searched your store yet — needs promotion." />
           </span>
             <div style={{ display: 'flex', gap: 10 }}>
               {gapCount > 0 && (
@@ -168,23 +187,59 @@ export default function DemandGaps({ data }: Props) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Chart */}
-            <div className="card" style={{ paddingTop: 20, paddingBottom: 8 }}>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={trendingKeywords} margin={{ top: 4, right: 8, left: -12, bottom: 4 }} barCategoryGap="30%">
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="keyword"
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'DM Mono, monospace' }}
-                    axisLine={{ stroke: 'var(--border)' }}
-                    tickLine={false}
-                  />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'DM Mono, monospace' }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(245,158,11,0.06)' }} />
-                  <Bar dataKey="score" fill="var(--accent)" radius={0} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {/* Trends vs Store Activity chart */}
+            {(() => {
+              const maxSearches = Math.max(...trendStockRows.map((r) => r.searchCount), 1);
+              const chartData = trendStockRows.map((r) => ({
+                keyword: r.keyword,
+                'Google Trends': r.score,
+                'Store Searches': Math.round((r.searchCount / maxSearches) * 100),
+                status: r.status,
+              }));
+              return (
+                <div className="card" style={{ paddingTop: 20, paddingBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-faint)', letterSpacing: '0.08em', fontFamily: 'DM Mono, monospace', marginBottom: 12, paddingLeft: 4 }}>
+                    GOOGLE TRENDS INTEREST (0–100) vs STORE SEARCH ACTIVITY (normalised)
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={chartData} margin={{ top: 4, right: 8, left: -12, bottom: 4 }} barCategoryGap="25%" barGap={3}>
+                      <CartesianGrid stroke="var(--border)" vertical={false} />
+                      <XAxis
+                        dataKey="keyword"
+                        tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'DM Mono, monospace' }}
+                        axisLine={{ stroke: 'var(--border)' }}
+                        tickLine={false}
+                      />
+                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'DM Mono, monospace' }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                      <Legend
+                        wrapperStyle={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: 'var(--text-muted)', paddingTop: 8 }}
+                        iconSize={8}
+                        iconType="square"
+                      />
+                      <Bar dataKey="Google Trends" radius={0}>
+                        {chartData.map((entry) => (
+                          <Cell key={entry.keyword} fill={STATUS_COLOR[entry.status as StockStatus]} fillOpacity={0.85} />
+                        ))}
+                      </Bar>
+                      <Bar dataKey="Store Searches" fill="rgba(148,163,184,0.35)" radius={0} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  {/* Status colour legend */}
+                  <div style={{ display: 'flex', gap: 16, paddingTop: 10, borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                    {(['STOCKED', 'GAP', 'OPPORTUNITY'] as StockStatus[]).map((s) => (
+                      <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--text-muted)' }}>
+                        <span style={{ width: 8, height: 8, background: STATUS_COLOR[s], display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ color: STATUS_COLOR[s], fontWeight: 600, fontFamily: 'DM Mono, monospace' }}>{s}</span>
+                      </div>
+                    ))}
+                    <span style={{ fontSize: 10, color: 'var(--text-faint)', marginLeft: 'auto' }}>
+                      Grey bar = store search volume (scaled to 0–100)
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Cross-reference table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -205,7 +260,7 @@ export default function DemandGaps({ data }: Props) {
                     <th style={{ textAlign: 'right' }}>Store Searches</th>
                     <th style={{ textAlign: 'center' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        Status <Tooltip text="STOCKED: trending and in your catalog. GAP: trending, buyers searched, no results. OPPORTUNITY: trending on Google but not yet searched here." />
+                        Status <Tooltip text="STOCKED: buyers search & find results. GAP: buyers search but get zero results — listing or stock issue. OPPORTUNITY: trending but no buyer searches yet — promote it." />
                       </span>
                     </th>
                   </tr>
