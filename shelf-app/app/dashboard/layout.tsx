@@ -311,6 +311,46 @@ function Sidebar({
             </div>
           )}
         </div>
+        {(pluginSiteUrl || storeUrl) && (
+          <a
+            href={pluginSiteUrl || storeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+              width: '100%',
+              padding: '8px 12px',
+              marginBottom: 8,
+              background: 'transparent',
+              border: '1px solid var(--accent)',
+              color: 'var(--accent)',
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              cursor: 'pointer',
+              textAlign: 'center',
+              boxSizing: 'border-box',
+              transition: 'background 0.12s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(245,158,11,0.08)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+              <path d="M7 2H2v12h12V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+              <path d="M10 2h4v4M14 2L8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+            </svg>
+            VISIT STORE
+          </a>
+        )}
         <button
           onClick={handleLogout}
           style={{
