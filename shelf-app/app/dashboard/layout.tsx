@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { isAuthenticated, getAuth, clearAuth } from '@/lib/auth';
+import { isAuthenticated, getAuth, clearAuth, saveAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 import ThemeToggle from '@/components/ThemeToggle';
 
 // ── Nav item data ──────────────────────────────────────────────
@@ -104,7 +105,19 @@ function UserAvatar({ email }: { email: string }) {
 
 // ── Sidebar ────────────────────────────────────────────────────
 
-function Sidebar({ storeName, lastSync, email }: { storeName: string; lastSync: string; email: string }) {
+function Sidebar({
+  storeName,
+  storeUrl,
+  pluginSiteUrl,
+  lastSync,
+  email,
+}: {
+  storeName: string;
+  storeUrl: string;
+  pluginSiteUrl: string | null;
+  lastSync: string;
+  email: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -229,33 +242,75 @@ function Sidebar({ storeName, lastSync, email }: { storeName: string; lastSync: 
           borderTop: '1px solid var(--border)',
         }}
       >
-        {storeName && (
-          <div
-            style={{
-              fontSize: 11,
-              color: 'var(--text-muted)',
-              letterSpacing: '0.04em',
-              marginBottom: 2,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {storeName}
-          </div>
-        )}
-        {lastSync && (
-          <div
-            style={{
-              fontSize: 10,
-              color: 'var(--text-faint)',
-              letterSpacing: '0.04em',
-              marginBottom: 10,
-            }}
-          >
-            Synced {lastSync}
-          </div>
-        )}
+        {/* Connected store status */}
+        <div style={{ marginBottom: 12 }}>
+          {storeName && (
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--text)',
+                fontWeight: 500,
+                letterSpacing: '0.04em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                marginBottom: 2,
+              }}
+            >
+              {storeName}
+            </div>
+          )}
+          {storeUrl && (
+            <div
+              style={{
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                letterSpacing: '0.03em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                marginBottom: 2,
+              }}
+            >
+              {storeUrl.replace(/^https?:\/\//, '')}
+            </div>
+          )}
+          {pluginSiteUrl && storeUrl && pluginSiteUrl.replace(/\/$/, '') !== storeUrl.replace(/\/$/, '') && (
+            <Link
+              href="/dashboard/settings?tab=store"
+              title={`Plugin reports: ${pluginSiteUrl}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                marginTop: 4,
+                padding: '3px 7px',
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.4)',
+                color: 'var(--danger)',
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+              }}
+            >
+              ⚠ Domain mismatch
+            </Link>
+          )}
+          {lastSync && (
+            <div
+              style={{
+                fontSize: 10,
+                color: 'var(--text-faint)',
+                letterSpacing: '0.04em',
+                marginTop: 2,
+              }}
+            >
+              Synced {lastSync}
+            </div>
+          )}
+        </div>
         <button
           onClick={handleLogout}
           style={{
@@ -300,6 +355,8 @@ function TopBar({ storeName, lastSync }: { storeName: string; lastSync: string }
       ? 'Store Health'
       : pathname.includes('/activity')
       ? 'Activity'
+      : pathname.includes('/settings')
+      ? 'Settings'
       : 'Dashboard';
 
   return (
@@ -359,6 +416,8 @@ function TopBar({ storeName, lastSync }: { storeName: string; lastSync: string }
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [storeName, setStoreName] = useState('');
+  const [storeUrl, setStoreUrl] = useState('');
+  const [pluginSiteUrl, setPluginSiteUrl] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState('—');
   const [email, setEmail] = useState('');
 
@@ -367,17 +426,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.replace('/login');
       return;
     }
-    const stored = localStorage.getItem('shelf_store_name');
-    if (stored) setStoreName(stored);
+    const auth = getAuth();
+    if (!auth) return;
+
+    if (auth.storeName) setStoreName(auth.storeName);
+    if (auth.storeUrl) setStoreUrl(auth.storeUrl);
     const sync = localStorage.getItem('shelf_last_sync');
     if (sync) setLastSync(sync);
-    const token = localStorage.getItem('shelf_token');
-    if (token) setEmail(getEmailFromToken(token));
+    setEmail(getEmailFromToken(auth.token));
+
+    api.getProfile(auth.token).then((profile) => {
+      setStoreName(profile.storeName);
+      setStoreUrl(profile.storeUrl);
+      setPluginSiteUrl(profile.pluginSiteUrl);
+      saveAuth(auth.token, auth.apiKey, auth.storeId, profile.storeName, profile.storeUrl);
+    }).catch(() => {});
   }, [router]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar storeName={storeName} lastSync={lastSync} email={email} />
+      <Sidebar storeName={storeName} storeUrl={storeUrl} pluginSiteUrl={pluginSiteUrl} lastSync={lastSync} email={email} />
       <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopBar storeName={storeName} lastSync={lastSync} />
         <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>{children}</main>

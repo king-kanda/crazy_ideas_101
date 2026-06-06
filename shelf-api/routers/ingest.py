@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -24,9 +24,15 @@ router = APIRouter()
 @router.post("/products", response_model=IngestResponse)
 async def ingest_products(
     body: IngestProductsRequest,
+    x_shelf_site_url: Optional[str] = Header(None),
     store: Store = Depends(get_store_from_api_key),
     db: AsyncSession = Depends(get_db),
 ):
+    if x_shelf_site_url and store.plugin_site_url != x_shelf_site_url:
+        site_result = await db.execute(select(Store).where(Store.id == store.id))
+        db_store = site_result.scalars().first()
+        if db_store:
+            db_store.plugin_site_url = x_shelf_site_url
     inserted = 0
     updated = 0
 

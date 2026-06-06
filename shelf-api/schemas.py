@@ -37,6 +37,23 @@ class RegenerateKeyResponse(BaseModel):
     api_key: str
 
 
+class StoreProfileResponse(BaseModel):
+    store_name: str
+    store_url: str
+    niche: Optional[str]
+    location_country: Optional[str]
+    location_city: Optional[str]
+    plugin_site_url: Optional[str]
+
+
+class UpdateProfileRequest(BaseModel):
+    store_name: Optional[str] = None
+    store_url: Optional[str] = None
+    niche: Optional[str] = None
+    location_country: Optional[str] = None
+    location_city: Optional[str] = None
+
+
 # ── Ingest: Products ──────────────────────────────────────────────────────────
 
 class ProductIn(BaseModel):

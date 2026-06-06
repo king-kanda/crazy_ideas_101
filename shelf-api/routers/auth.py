@@ -5,7 +5,10 @@ from sqlalchemy import select
 
 from database import get_db
 from models import Store
-from schemas import SignupRequest, LoginRequest, SignupResponse, VerifyResponse, RegenerateKeyResponse
+from schemas import (
+    SignupRequest, LoginRequest, SignupResponse, VerifyResponse,
+    RegenerateKeyResponse, StoreProfileResponse, UpdateProfileRequest,
+)
 from auth import hash_password, verify_password, create_jwt, get_store_from_api_key, get_store_from_jwt
 
 router = APIRouter()
@@ -71,4 +74,52 @@ async def verify(store: Store = Depends(get_store_from_api_key)):
         verified=True,
         store_name=store.store_name,
         store_id=str(store.id),
+    )
+
+
+@router.get("/profile", response_model=StoreProfileResponse)
+async def get_profile(store: Store = Depends(get_store_from_jwt)):
+    return StoreProfileResponse(
+        store_name=store.store_name,
+        store_url=store.store_url,
+        niche=store.niche,
+        location_country=store.location_country,
+        location_city=store.location_city,
+        plugin_site_url=store.plugin_site_url,
+    )
+
+
+@router.patch("/profile", response_model=StoreProfileResponse)
+async def update_profile(
+    body: UpdateProfileRequest,
+    db: AsyncSession = Depends(get_db),
+    store: Store = Depends(get_store_from_jwt),
+):
+    result = await db.execute(select(Store).where(Store.id == store.id))
+    db_store = result.scalars().first()
+    if not db_store:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Store not found")
+
+    if body.store_name is not None:
+        db_store.store_name = body.store_name
+    if body.store_url is not None:
+        db_store.store_url = body.store_url
+    if body.niche is not None:
+        db_store.niche = body.niche
+    if body.location_country is not None:
+        db_store.location_country = body.location_country
+    if body.location_city is not None:
+        db_store.location_city = body.location_city
+
+    db.add(db_store)
+    await db.commit()
+    await db.refresh(db_store)
+
+    return StoreProfileResponse(
+        store_name=db_store.store_name,
+        store_url=db_store.store_url,
+        niche=db_store.niche,
+        location_country=db_store.location_country,
+        location_city=db_store.location_city,
+        plugin_site_url=db_store.plugin_site_url,
     )

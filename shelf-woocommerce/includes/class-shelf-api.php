@@ -60,6 +60,7 @@ class Shelf_API {
                 'headers'     => [
                     'Content-Type'    => 'application/json',
                     'X-Shelf-API-Key' => $api_key,
+                    'X-Shelf-Site-URL' => get_site_url(),
                     'Accept'          => 'application/json',
                 ],
                 'body'        => wp_json_encode( $data ),

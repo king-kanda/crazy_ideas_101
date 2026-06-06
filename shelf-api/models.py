@@ -22,6 +22,7 @@ class Store(Base):
     location_country = Column(Text)
     location_city = Column(Text)
     api_key = Column(Text, unique=True, nullable=False)
+    plugin_site_url = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     products = relationship("Product", back_populates="store", cascade="all, delete-orphan")

@@ -111,7 +111,7 @@ function Step1({ onNext }: { onNext: () => void }) {
         location_country: form.country || undefined,
         location_city: form.city || undefined,
       });
-      saveAuth(res.token, res.apiKey, res.storeId);
+      saveAuth(res.token, res.apiKey, res.storeId, form.storeName, form.storeUrl);
       sessionStorage.removeItem('shelf_pending_email');
       sessionStorage.removeItem('shelf_pending_password');
       onNext();

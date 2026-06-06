@@ -38,6 +38,23 @@ export interface VerifyResponse {
   lastSync?: string;
 }
 
+export interface StoreProfile {
+  storeName: string;
+  storeUrl: string;
+  niche: string | null;
+  locationCountry: string | null;
+  locationCity: string | null;
+  pluginSiteUrl: string | null;
+}
+
+export interface UpdateProfileData {
+  storeName?: string;
+  storeUrl?: string;
+  niche?: string;
+  locationCountry?: string;
+  locationCity?: string;
+}
+
 export interface SearchQuery {
   query: string;
   count: number;
@@ -221,6 +238,69 @@ export const api = {
         revenue:   (p.revenue ?? 0) as number,
       })),
       generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
+    };
+  },
+
+  labs: {
+    groq: async (token: string) =>
+      apiFetch<{ ok: boolean; model?: string; response?: string; response_time_ms?: number; error?: string }>(
+        '/labs/groq', { authToken: token }
+      ),
+    celery: async (token: string) =>
+      apiFetch<{ ok: boolean; workers?: string[]; count?: number; error?: string }>(
+        '/labs/celery', { authToken: token }
+      ),
+    trends: async (token: string) =>
+      apiFetch<{ ok: boolean; keyword?: string; geo?: string; avg_interest?: number; response_time_ms?: number; error?: string }>(
+        '/labs/trends', { authToken: token }
+      ),
+  },
+
+  getProfile: async (token: string): Promise<StoreProfile> => {
+    const raw = await apiFetch<{
+      store_name: string;
+      store_url: string;
+      niche: string | null;
+      location_country: string | null;
+      location_city: string | null;
+      plugin_site_url: string | null;
+    }>('/auth/profile', { authToken: token });
+    return {
+      storeName: raw.store_name,
+      storeUrl: raw.store_url,
+      niche: raw.niche,
+      locationCountry: raw.location_country,
+      locationCity: raw.location_city,
+      pluginSiteUrl: raw.plugin_site_url,
+    };
+  },
+
+  updateProfile: async (token: string, data: UpdateProfileData): Promise<StoreProfile> => {
+    const raw = await apiFetch<{
+      store_name: string;
+      store_url: string;
+      niche: string | null;
+      location_country: string | null;
+      location_city: string | null;
+      plugin_site_url: string | null;
+    }>('/auth/profile', {
+      method: 'PATCH',
+      authToken: token,
+      body: JSON.stringify({
+        store_name: data.storeName,
+        store_url: data.storeUrl,
+        niche: data.niche,
+        location_country: data.locationCountry,
+        location_city: data.locationCity,
+      }),
+    });
+    return {
+      storeName: raw.store_name,
+      storeUrl: raw.store_url,
+      niche: raw.niche,
+      locationCountry: raw.location_country,
+      locationCity: raw.location_city,
+      pluginSiteUrl: raw.plugin_site_url,
     };
   },
 

@@ -11,6 +11,7 @@ from database import init_db
 from routers.auth import router as auth_router
 from routers.ingest import router as ingest_router
 from routers.insights import router as insights_router
+from routers.labs import router as labs_router
 
 
 @asynccontextmanager
@@ -37,6 +38,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(ingest_router, prefix="/ingest", tags=["Ingest"])
 app.include_router(insights_router, prefix="/insights", tags=["Insights"])
+app.include_router(labs_router, prefix="/labs", tags=["Labs"])
 
 
 @app.get("/health", tags=["Health"])

@@ -33,3 +33,8 @@ async def get_db() -> AsyncSession:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(
+            __import__("sqlalchemy").text(
+                "ALTER TABLE stores ADD COLUMN IF NOT EXISTS plugin_site_url TEXT"
+            )
+        )
