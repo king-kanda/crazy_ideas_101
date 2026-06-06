@@ -17,6 +17,7 @@ import Tooltip from './Tooltip';
 
 interface Props {
   data: ActivityResponse;
+  period?: 'day' | 'week' | 'month';
 }
 
 function fmt12h(hour: number): string {
@@ -90,7 +91,10 @@ function getMarketingTips(peakHour: number, dailyTrend: 'rising' | 'falling' | '
   return tips;
 }
 
-export default function ActivityHeatmap({ data }: Props) {
+const PERIOD_LABEL = { day: '24-Hour', week: '7-Day', month: '30-Day' };
+const PERIOD_VIEWS_LABEL = { day: '24h Page Views', week: '7-Day Page Views', month: '30-Day Page Views' };
+
+export default function ActivityHeatmap({ data, period = 'week' }: Props) {
   const { hourly = [], daily = [], peakHours = [], totalUniqueVisitors = 0 } = data ?? {};
 
   const maxUsers = Math.max(...hourly.map((h) => h.activeUsers), 1);
@@ -126,7 +130,7 @@ export default function ActivityHeatmap({ data }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, border: '1px solid var(--border)' }}>
         {[
           { value: totalUniqueVisitors.toLocaleString(), label: 'Avg Daily Visitors', tip: 'Average number of active users recorded per day over the tracked period.' },
-          { value: totalPageViews.toLocaleString(), label: '7-Day Page Views', tip: 'Total page views logged across all 7 days of recorded activity data.' },
+          { value: totalPageViews.toLocaleString(), label: PERIOD_VIEWS_LABEL[period], tip: `Total page views logged across the selected ${period} window.` },
           { value: peakHours.length > 0 ? fmt12h(peakHours[0].hour) : '—', label: 'Peak Hour', tip: 'The hour of day with the highest average active user count across all recorded days.' },
           {
             value: dailyTrend === 'rising' ? '↑ Rising' : dailyTrend === 'falling' ? '↓ Falling' : '→ Stable',
@@ -160,8 +164,8 @@ export default function ActivityHeatmap({ data }: Props) {
         <section>
           <div className="section-header">
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            7-Day Traffic Trend
-            <Tooltip text="Daily active users and page views over the last 7 days. The solid line is users; the dashed line is page views." />
+            {PERIOD_LABEL[period]} Traffic Trend
+            <Tooltip text={`Daily active users and page views over the selected ${period} window. Solid line = users, dashed = page views.`} />
           </span>
             <span
               style={{

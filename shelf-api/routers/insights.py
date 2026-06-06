@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from groq import Groq
 from sqlalchemy import select, func, delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -267,12 +267,19 @@ async def store_insights(store_id: str, db: AsyncSession = Depends(get_db)):
 # ── /insights/{store_id}/activity ────────────────────────────────────────────
 
 @router.get("/{store_id}/activity", response_model=ActivityInsights)
-async def activity_insights(store_id: str, db: AsyncSession = Depends(get_db)):
+async def activity_insights(
+    store_id: str,
+    period: str = Query("week", regex="^(day|week|month)$"),
+    db: AsyncSession = Depends(get_db),
+):
     store = await _get_store_or_404(store_id, db)
+
+    cutoff_days = {"day": 1, "week": 7, "month": 30}
+    cutoff = datetime.utcnow() - timedelta(days=cutoff_days[period])
 
     log_rows = await db.execute(
         select(ActivityLog)
-        .where(ActivityLog.store_id == store.id)
+        .where(ActivityLog.store_id == store.id, ActivityLog.hour_bucket >= cutoff)
         .order_by(ActivityLog.hour_bucket.asc())
     )
     logs = log_rows.scalars().all()

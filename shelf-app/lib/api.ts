@@ -348,8 +348,8 @@ export const api = {
     };
   },
 
-  activity: async (storeId: string, apiKey: string): Promise<ActivityResponse> => {
-    const raw = await apiFetch<Record<string, unknown>>(`/insights/${storeId}/activity`, { apiKey });
+  activity: async (storeId: string, apiKey: string, period: 'day' | 'week' | 'month' = 'week'): Promise<ActivityResponse> => {
+    const raw = await apiFetch<Record<string, unknown>>(`/insights/${storeId}/activity?period=${period}`, { apiKey });
 
     // heatmap is [{hour, active_users}], frontend expects [{hour: number, activeUsers}]
     const heatmap = (raw.heatmap ?? raw.hourly ?? []) as Array<Record<string, unknown>>;
