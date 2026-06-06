@@ -35,7 +35,7 @@ class Shelf_Activity {
             return;
         }
 
-        $hour    = gmdate( 'Y-m-d H:00:00' );
+        $hour    = gmdate( 'Y-m-d\TH:00:00\Z' );
         $key     = self::KEY_PREFIX . $hour;
         $current = get_transient( $key );
 
@@ -68,7 +68,7 @@ class Shelf_Activity {
         }
 
         // Flush the hour that just completed (current hour - 1).
-        $prev_hour = gmdate( 'Y-m-d H:00:00', time() - HOUR_IN_SECONDS );
+        $prev_hour = gmdate( 'Y-m-d\TH:00:00\Z', time() - HOUR_IN_SECONDS );
         $key       = self::KEY_PREFIX . $prev_hour;
         $data      = get_transient( $key );
 
@@ -79,10 +79,13 @@ class Shelf_Activity {
         Shelf_API::post(
             '/ingest/activity',
             [
-                'store_id' => Shelf_API::get_store_id(),
-                'hour'     => $prev_hour,
-                'views'    => (int) $data['views'],
-                'users'    => (int) $data['users'],
+                'logs' => [
+                    [
+                        'hour_bucket'  => $prev_hour,
+                        'active_users' => (int) $data['users'],
+                        'page_views'   => (int) $data['views'],
+                    ],
+                ],
             ]
         );
 

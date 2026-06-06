@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 import uuid
 
@@ -76,7 +76,7 @@ async def ingest_searches(
             query=ev.query,
             results_count=ev.results_count,
             user_found_product=ev.user_found_product,
-            occurred_at=ev.occurred_at,
+            occurred_at=ev.occurred_at.replace(tzinfo=None),
         )
         for ev in body.events
     ]
@@ -112,8 +112,9 @@ async def ingest_cart_events(
                 store_id=store.id,
                 event_type=ev.event_type,
                 product_id=product_id,
+                wc_product_id=ev.wc_product_id,
                 session_id=ev.session_id,
-                occurred_at=ev.occurred_at,
+                occurred_at=ev.occurred_at.replace(tzinfo=None),
             )
         )
     db.add_all(events)
@@ -132,7 +133,7 @@ async def ingest_activity(
         result = await db.execute(
             select(ActivityLog).where(
                 ActivityLog.store_id == store.id,
-                ActivityLog.hour_bucket == log.hour_bucket,
+                ActivityLog.hour_bucket == log.hour_bucket.replace(tzinfo=None),
             )
         )
         existing = result.scalars().first()
@@ -143,7 +144,7 @@ async def ingest_activity(
             db.add(
                 ActivityLog(
                     store_id=store.id,
-                    hour_bucket=log.hour_bucket,
+                    hour_bucket=log.hour_bucket.replace(tzinfo=None),
                     active_users=log.active_users,
                     page_views=log.page_views,
                 )

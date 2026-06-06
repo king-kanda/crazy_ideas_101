@@ -18,6 +18,7 @@ class Shelf_Admin {
         add_action( 'admin_menu',            [ $this, 'add_menu' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
         add_action( 'admin_post_shelf_save_settings', [ $this, 'save_settings' ] );
+        add_action( 'admin_post_shelf_sync_now',      [ $this, 'sync_now' ] );
     }
 
     // -------------------------------------------------------------------------
@@ -181,6 +182,33 @@ class Shelf_Admin {
 
         wp_safe_redirect(
             add_query_arg( 'status', 'saved', admin_url( 'admin.php?page=shelf' ) )
+        );
+        exit;
+    }
+
+    // -------------------------------------------------------------------------
+    // Manual sync
+    // -------------------------------------------------------------------------
+
+    /**
+     * Immediately run product sync + flush buffered events.
+     * Triggered by the "Sync Now" button in settings.
+     *
+     * @return void
+     */
+    public function sync_now(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'You do not have sufficient permissions.', 'shelf-woocommerce' ) );
+        }
+
+        check_admin_referer( 'shelf_sync_now', 'shelf_sync_nonce' );
+
+        Shelf_Sync::run();
+        Shelf_Tracker::flush_events_static();
+        Shelf_Activity::flush();
+
+        wp_safe_redirect(
+            add_query_arg( 'status', 'synced', admin_url( 'admin.php?page=shelf' ) )
         );
         exit;
     }

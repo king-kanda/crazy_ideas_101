@@ -143,15 +143,106 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  verify: (apiKey: string) =>
-    apiFetch<VerifyResponse>('/auth/verify', { apiKey }),
+  verify: async (apiKey: string): Promise<VerifyResponse> => {
+    const raw = await apiFetch<{ verified: boolean; store_name: string; store_id: string }>(
+      '/auth/verify',
+      { apiKey },
+    );
+    return { verified: raw.verified, storeName: raw.store_name, storeId: raw.store_id };
+  },
 
-  demand: (storeId: string, apiKey: string) =>
-    apiFetch<DemandResponse>(`/insights/${storeId}/demand`, { apiKey }),
+  demand: async (storeId: string, apiKey: string): Promise<DemandResponse> => {
+    const raw = await apiFetch<Record<string, unknown>>(`/insights/${storeId}/demand`, { apiKey });
+    const searches = (raw.top_searches ?? raw.topSearches ?? []) as Array<Record<string, unknown>>;
+    const trends   = (raw.trend_keywords ?? raw.trendingKeywords ?? []) as Array<Record<string, unknown>>;
+    const gaps     = (raw.gaps ?? raw.demandGaps ?? []) as Array<Record<string, unknown>>;
+    return {
+      topSearches: searches.map((s) => ({
+        query:       s.query as string,
+        count:       s.count as number,
+        zeroResults: (s.zero_results ?? s.zeroResults) as boolean,
+      })),
+      trendingKeywords: trends.map((t) => ({
+        keyword: t.keyword as string,
+        score:   (t.interest ?? t.score ?? 0) as number,
+        delta:   (t.delta ?? 0) as number,
+      })),
+      demandGaps: gaps.map((g, i) => ({
+        id:       (g.id ?? String(i)) as string,
+        signal:   g.signal as string,
+        severity: g.severity as 'high' | 'medium' | 'low',
+        category: g.category as string | undefined,
+      })),
+      generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
+    };
+  },
 
-  store: (storeId: string, apiKey: string) =>
-    apiFetch<StoreResponse>(`/insights/${storeId}/store`, { apiKey }),
+  store: async (storeId: string, apiKey: string): Promise<StoreResponse> => {
+    const raw = await apiFetch<Record<string, unknown>>(`/insights/${storeId}/store`, { apiKey });
 
-  activity: (storeId: string, apiKey: string) =>
-    apiFetch<ActivityResponse>(`/insights/${storeId}/activity`, { apiKey }),
+    // cart_funnel is an object {add_to_cart, abandoned, purchased} — reshape to array
+    const cf = (raw.cart_funnel ?? raw.funnel ?? {}) as Record<string, unknown>;
+    const funnel: FunnelStage[] = Array.isArray(raw.funnel)
+      ? (raw.funnel as FunnelStage[])
+      : [
+          { label: 'Add to Cart', count: (cf.add_to_cart ?? 0) as number },
+          { label: 'Abandoned',   count: (cf.abandoned ?? 0) as number },
+          { label: 'Purchased',   count: (cf.purchased ?? 0) as number },
+        ];
+
+    const abandons = (raw.high_abandon_products ?? raw.highAbandonProducts ?? []) as Array<Record<string, unknown>>;
+    const sellers  = (raw.top_sellers ?? raw.topSellers ?? []) as Array<Record<string, unknown>>;
+
+    return {
+      funnel,
+      highAbandonProducts: abandons.map((p, i) => ({
+        id:             (p.id ?? String(i)) as string,
+        name:           (p.product_name ?? p.name) as string,
+        sku:            (p.sku ?? '—') as string,
+        abandonRate:    (p.abandon_rate ?? p.abandonRate ?? 0) as number,
+        addToCartCount: (p.views ?? p.addToCartCount ?? 0) as number,
+      })),
+      topSellers: sellers.map((p, i) => ({
+        id:        (p.id ?? String(i)) as string,
+        name:      (p.product_name ?? p.name) as string,
+        sku:       (p.sku ?? '—') as string,
+        unitsSold: (p.purchase_count ?? p.unitsSold ?? 0) as number,
+        revenue:   (p.revenue ?? 0) as number,
+      })),
+      generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
+    };
+  },
+
+  activity: async (storeId: string, apiKey: string): Promise<ActivityResponse> => {
+    const raw = await apiFetch<Record<string, unknown>>(`/insights/${storeId}/activity`, { apiKey });
+
+    // heatmap is [{hour, active_users}], frontend expects [{hour: number, activeUsers}]
+    const heatmap = (raw.heatmap ?? raw.hourly ?? []) as Array<Record<string, unknown>>;
+    const peaks   = (raw.peak_hours ?? raw.peakHours ?? []) as Array<unknown>;
+
+    const hourly: HourlyActivity[] = heatmap.map((h) => ({
+      hour:        new Date(h.hour as string).getHours(),
+      activeUsers: (h.active_users ?? h.activeUsers ?? 0) as number,
+    }));
+
+    const peakHours: PeakHour[] = peaks.map((p) => {
+      if (typeof p === 'string') {
+        const h = parseInt(p.split(':')[0], 10);
+        return { hour: h, activeUsers: 0, label: p };
+      }
+      const po = p as Record<string, unknown>;
+      return {
+        hour:        (po.hour ?? 0) as number,
+        activeUsers: (po.activeUsers ?? po.active_users ?? 0) as number,
+        label:       (po.label ?? '') as string,
+      };
+    });
+
+    return {
+      hourly,
+      peakHours,
+      totalUniqueVisitors: (raw.avg_daily_users ?? raw.totalUniqueVisitors ?? 0) as number,
+      generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
+    };
+  },
 };

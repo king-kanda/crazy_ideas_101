@@ -39,13 +39,16 @@ $niches = [
                 <?php if ( '' !== $store_id ) : ?>
                     <?php
                     printf(
-                        /* translators: %s: store ID */
                         esc_html__( 'Connected to Shelf. Store ID: %s', 'shelf-woocommerce' ),
                         '<code>' . esc_html( $store_id ) . '</code>'
                     );
                     ?>
                 <?php endif; ?>
             </p>
+        </div>
+    <?php elseif ( 'synced' === $status ) : ?>
+        <div class="notice notice-success shelf-notice is-dismissible">
+            <p><strong><?php esc_html_e( 'Sync complete — products, events, and activity sent to Shelf.', 'shelf-woocommerce' ); ?></strong></p>
         </div>
     <?php elseif ( 'invalid' === $status ) : ?>
         <div class="notice notice-error shelf-notice is-dismissible">
@@ -188,6 +191,20 @@ $niches = [
                 </button>
             </p>
         </form>
+
+        <?php if ( '' !== $store_id ) : ?>
+        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:12px;padding-top:16px;border-top:1px solid #e0e0e0;">
+            <input type="hidden" name="action" value="shelf_sync_now">
+            <?php wp_nonce_field( 'shelf_sync_now', 'shelf_sync_nonce' ); ?>
+            <p style="margin:0 0 10px;color:#666;font-size:13px;">
+                <?php esc_html_e( 'Immediately push all products and any buffered events to Shelf — useful during setup or testing.', 'shelf-woocommerce' ); ?>
+            </p>
+            <button type="submit" class="button button-secondary">
+                <span class="dashicons dashicons-update" style="vertical-align:middle;margin-right:4px;margin-top:-2px;"></span>
+                <?php esc_html_e( 'Sync Now', 'shelf-woocommerce' ); ?>
+            </button>
+        </form>
+        <?php endif; ?>
     </div>
 
     <div class="shelf-card shelf-info-card">

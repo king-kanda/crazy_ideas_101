@@ -44,7 +44,7 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/verify", response_model=VerifyResponse)
 async def verify(store: Store = Depends(get_store_from_api_key)):
     return VerifyResponse(
-        valid=True,
+        verified=True,
         store_name=store.store_name,
         store_id=str(store.id),
     )

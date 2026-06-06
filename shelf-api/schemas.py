@@ -23,7 +23,7 @@ class SignupResponse(BaseModel):
 
 
 class VerifyResponse(BaseModel):
-    valid: bool
+    verified: bool
     store_name: str
     store_id: str
 

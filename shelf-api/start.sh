@@ -54,11 +54,11 @@ trap cleanup EXIT INT TERM
 # ── celery worker + beat ──────────────────────────────────────────────────────
 if [ -z "$SKIP_WORKERS" ]; then
   info "Starting Celery worker..."
-  celery -A celery_app worker --loglevel=info --concurrency=2 &
+  PYTHONPATH="$SCRIPT_DIR" celery -A celery_app worker --loglevel=info --concurrency=2 &
   PIDS+=($!)
 
   info "Starting Celery beat (scheduler)..."
-  celery -A celery_app beat --loglevel=info &
+  PYTHONPATH="$SCRIPT_DIR" celery -A celery_app beat --loglevel=info &
   PIDS+=($!)
 fi
 

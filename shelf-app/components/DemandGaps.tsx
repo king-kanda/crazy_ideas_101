@@ -41,7 +41,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 // ── Component ──────────────────────────────────────────────────
 
 export default function DemandGaps({ data }: Props) {
-  const { topSearches, trendingKeywords, demandGaps } = data;
+  const { topSearches = [], trendingKeywords = [], demandGaps = [] } = data ?? {};
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>

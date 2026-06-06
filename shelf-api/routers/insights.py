@@ -121,15 +121,20 @@ async def demand_insights(store_id: str, db: AsyncSession = Depends(get_db)):
 async def store_insights(store_id: str, db: AsyncSession = Depends(get_db)):
     store = await _get_store_or_404(store_id, db)
 
-    # Top sellers: products most purchased
+    # Top sellers: products most purchased (LEFT JOIN so unsynced products still appear)
+    from sqlalchemy import cast, Text as SAText
     purchase_rows = await db.execute(
-        select(Product.name, func.count(CartEvent.id).label("purchase_count"))
-        .join(CartEvent, CartEvent.product_id == Product.id)
+        select(
+            func.coalesce(Product.name, func.cast(CartEvent.wc_product_id, SAText)).label("name"),
+            func.count(CartEvent.id).label("purchase_count"),
+        )
+        .select_from(CartEvent)
+        .join(Product, CartEvent.product_id == Product.id, isouter=True)
         .where(
             CartEvent.store_id == store.id,
             CartEvent.event_type == "purchase",
         )
-        .group_by(Product.name)
+        .group_by(func.coalesce(Product.name, func.cast(CartEvent.wc_product_id, SAText)))
         .order_by(func.count(CartEvent.id).desc())
         .limit(10)
     )
@@ -173,34 +178,42 @@ async def store_insights(store_id: str, db: AsyncSession = Depends(get_db)):
     total_initiated = add_to_cart
     abandonment_rate = round(abandoned / total_initiated, 4) if total_initiated > 0 else 0.0
 
-    # High abandonment products
-    view_rows = await db.execute(
-        select(Product.name, func.count(CartEvent.id).label("views"))
-        .join(CartEvent, CartEvent.product_id == Product.id)
-        .where(CartEvent.store_id == store.id, CartEvent.event_type == "view")
-        .group_by(Product.name)
+    # High abandonment products — baseline is add_to_cart (LEFT JOIN handles unsynced products)
+    from sqlalchemy import cast, Text as SAText  # noqa: F811
+    atc_rows = await db.execute(
+        select(
+            func.coalesce(Product.name, func.cast(CartEvent.wc_product_id, SAText)).label("product_key"),
+            func.count(CartEvent.id).label("atc_count"),
+        )
+        .select_from(CartEvent)
+        .join(Product, CartEvent.product_id == Product.id, isouter=True)
+        .where(CartEvent.store_id == store.id, CartEvent.event_type == "add_to_cart")
+        .group_by(func.coalesce(Product.name, func.cast(CartEvent.wc_product_id, SAText)))
     )
-    view_map = {r.name: r.views for r in view_rows.all()}
+    atc_map = {r.product_key: r.atc_count for r in atc_rows.all()}
 
     abandon_rows = await db.execute(
-        select(Product.name, func.count(CartEvent.id).label("abandons"))
-        .join(CartEvent, CartEvent.product_id == Product.id)
+        select(
+            func.coalesce(Product.name, func.cast(CartEvent.wc_product_id, SAText)).label("product_key"),
+            func.count(CartEvent.id).label("abandons"),
+        )
+        .select_from(CartEvent)
+        .join(Product, CartEvent.product_id == Product.id, isouter=True)
         .where(CartEvent.store_id == store.id, CartEvent.event_type == "abandoned")
-        .group_by(Product.name)
+        .group_by(func.coalesce(Product.name, func.cast(CartEvent.wc_product_id, SAText)))
     )
-    abandon_map = {r.name: r.abandons for r in abandon_rows.all()}
+    abandon_map = {r.product_key: r.abandons for r in abandon_rows.all()}
 
     high_abandon_products = []
-    all_product_names = set(view_map.keys()) | set(abandon_map.keys())
-    for name in all_product_names:
-        views = view_map.get(name, 0)
-        abandons = abandon_map.get(name, 0)
-        rate = round(abandons / views, 4) if views > 0 else 0.0
+    for key in set(atc_map.keys()) | set(abandon_map.keys()):
+        atc = atc_map.get(key, 0)
+        abandons = abandon_map.get(key, 0)
+        rate = round(abandons / atc, 4) if atc > 0 else 0.0
         if rate > 0:
             high_abandon_products.append(
                 HighAbandonProduct(
-                    product_name=name,
-                    views=views,
+                    product_name=key,
+                    views=atc,
                     abandons=abandons,
                     abandon_rate=rate,
                 )

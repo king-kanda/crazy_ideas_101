@@ -67,6 +67,7 @@ class CartEvent(Base):
     store_id = Column(UUID(as_uuid=True), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False)
     event_type = Column(Text, nullable=False)
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    wc_product_id = Column(Integer, nullable=True)
     session_id = Column(Text)
     occurred_at = Column(DateTime, nullable=False)
 

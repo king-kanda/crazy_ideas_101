@@ -1,5 +1,9 @@
-from celery import Celery
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from celery import Celery
 
 celery = Celery('shelf', broker=os.environ.get('REDIS_URL', 'redis://localhost:6379'))
 

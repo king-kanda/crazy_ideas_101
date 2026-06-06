@@ -35,7 +35,7 @@ export default function CartFunnel({ stages }: Props) {
             const nextStage = stages[i + 1];
             const convRate = nextStage ? pct(nextStage.count, stage.count) : null;
             const dropRate = nextStage
-              ? (((stage.count - nextStage.count) / stage.count) * 100).toFixed(1) + '%'
+              ? (stage.count === 0 ? '0' : (((stage.count - nextStage.count) / stage.count) * 100).toFixed(1)) + '%'
               : null;
 
             return (
@@ -142,7 +142,7 @@ export default function CartFunnel({ stages }: Props) {
         {/* Visual bar representation */}
         <div style={{ marginTop: 20, display: 'flex', gap: 2, height: 4 }}>
           {stages.map((stage, i) => {
-            const widthPct = (stage.count / stages[0].count) * 100;
+            const widthPct = stages[0].count === 0 ? 0 : (stage.count / stages[0].count) * 100;
             return (
               <div
                 key={stage.label + '-bar'}

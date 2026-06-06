@@ -51,7 +51,7 @@ function ChartTooltip({
 }
 
 export default function ActivityHeatmap({ data }: Props) {
-  const { hourly, peakHours, totalUniqueVisitors } = data;
+  const { hourly = [], peakHours = [], totalUniqueVisitors = 0 } = data ?? {};
 
   const maxUsers = Math.max(...hourly.map((h) => h.activeUsers), 1);
 

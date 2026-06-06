@@ -201,15 +201,14 @@
         }
 
         tbody.innerHTML = searches.map(function (s) {
-            const trendArrow = s.trend === 'up'   ? '&#8593;' :
-                               s.trend === 'down' ? '&#8595;' : '&#8212;';
-            const trendColor = s.trend === 'up'   ? '#16a34a' :
-                               s.trend === 'down' ? '#dc2626' : '#6b7280';
+            const zeroTag = s.zero_results
+                ? '<span style="color:#dc2626;font-size:10px;font-weight:600;">ZERO RESULTS</span>'
+                : '<span style="color:#16a34a;font-size:10px;">found</span>';
             return `<tr>
-                <td><strong>${escHtml(s.term)}</strong></td>
-                <td>${fmt(s.volume)}</td>
-                <td>${fmt(s.avg_results)}</td>
-                <td style="color:${trendColor};font-weight:700;">${trendArrow}</td>
+                <td><strong>${escHtml(s.query)}</strong></td>
+                <td>${fmt(s.count)}</td>
+                <td>${zeroTag}</td>
+                <td>&#8212;</td>
             </tr>`;
         }).join('');
     }
@@ -290,8 +289,7 @@
         container.innerHTML = gaps.map(function (g) {
             const sev = ['high', 'medium', 'low'].includes(g.severity) ? g.severity : 'low';
             return `<div class="shelf-gap shelf-gap--${escHtml(sev)}">
-                <span class="shelf-gap-term">${escHtml(g.term)}</span>
-                <span class="shelf-gap-meta">${fmt(g.volume)} searches &bull; ${fmt(g.results)} results</span>
+                <span class="shelf-gap-term">${escHtml(g.signal)}</span>
                 <span class="shelf-gap-badge">${escHtml(sev)}</span>
             </div>`;
         }).join('');
@@ -312,8 +310,15 @@
             return;
         }
 
-        renderFunnel(data.funnel || []);
-        renderAbandonProducts(data.abandoned_products || []);
+        // cart_funnel is an object {add_to_cart, abandoned, purchased} — reshape to array
+        var cf = data.cart_funnel || {};
+        var funnelArr = [
+            { stage: 'Add to Cart', count: cf.add_to_cart || 0 },
+            { stage: 'Abandoned',   count: cf.abandoned   || 0 },
+            { stage: 'Purchased',   count: cf.purchased   || 0 },
+        ];
+        renderFunnel(funnelArr);
+        renderAbandonProducts(data.high_abandon_products || []);
         renderTopSellers(data.top_sellers || []);
     }
 
@@ -361,9 +366,9 @@
 
         tbody.innerHTML = products.map(function (p) {
             return `<tr>
-                <td>${escHtml(p.name)}</td>
+                <td>${escHtml(p.product_name)}</td>
                 <td>${fmt(p.abandons)}</td>
-                <td>${(+p.cart_rate).toFixed(1)}%</td>
+                <td>${(+(p.abandon_rate || 0) * 100).toFixed(1)}%</td>
             </tr>`;
         }).join('');
     }
@@ -383,9 +388,9 @@
 
         tbody.innerHTML = products.map(function (p) {
             return `<tr>
-                <td>${escHtml(p.name)}</td>
-                <td>${fmt(p.units)}</td>
-                <td>${fmtCurrency(p.revenue, p.currency || 'USD')}</td>
+                <td>${escHtml(p.product_name)}</td>
+                <td>${fmt(p.purchase_count)}</td>
+                <td>${fmtCurrency(p.revenue || 0, p.currency || 'USD')}</td>
             </tr>`;
         }).join('');
     }
