@@ -5,8 +5,8 @@ from sqlalchemy import select
 
 from database import get_db
 from models import Store
-from schemas import SignupRequest, LoginRequest, SignupResponse, VerifyResponse
-from auth import hash_password, verify_password, create_jwt, get_store_from_api_key
+from schemas import SignupRequest, LoginRequest, SignupResponse, VerifyResponse, RegenerateKeyResponse
+from auth import hash_password, verify_password, create_jwt, get_store_from_api_key, get_store_from_jwt
 
 router = APIRouter()
 
@@ -52,6 +52,17 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
     token = create_jwt(str(store.id), store.owner_email)
     return SignupResponse(token=token, api_key=store.api_key, store_id=str(store.id))
+
+
+@router.post("/regenerate-key", response_model=RegenerateKeyResponse)
+async def regenerate_key(
+    db: AsyncSession = Depends(get_db),
+    store: Store = Depends(get_store_from_jwt),
+):
+    store.api_key = str(uuid.uuid4())
+    db.add(store)
+    await db.commit()
+    return RegenerateKeyResponse(api_key=store.api_key)
 
 
 @router.get("/verify", response_model=VerifyResponse)

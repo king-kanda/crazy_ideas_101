@@ -33,6 +33,10 @@ class VerifyResponse(BaseModel):
     store_id: str
 
 
+class RegenerateKeyResponse(BaseModel):
+    api_key: str
+
+
 # ── Ingest: Products ──────────────────────────────────────────────────────────
 
 class ProductIn(BaseModel):

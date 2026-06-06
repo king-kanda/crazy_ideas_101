@@ -40,6 +40,38 @@ def decode_jwt(token: str) -> Optional[dict]:
         return None
 
 
+async def get_store_from_jwt(request: Request):
+    from models import Store
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header",
+        )
+
+    payload = decode_jwt(auth_header[7:])
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(Store).where(Store.id == payload.get("sub"))
+        )
+        store = result.scalars().first()
+
+    if not store:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Store not found",
+        )
+
+    return store
+
+
 async def get_store_from_api_key(request: Request):
     from models import Store
 

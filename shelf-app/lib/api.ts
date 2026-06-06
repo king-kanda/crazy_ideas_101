@@ -114,12 +114,13 @@ export interface ActivityResponse {
 
 export async function apiFetch<T>(
   path: string,
-  options?: RequestInit & { apiKey?: string }
+  options?: RequestInit & { apiKey?: string; authToken?: string }
 ): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (options?.apiKey) headers['X-Shelf-API-Key'] = options.apiKey;
+  if (options?.authToken) headers['Authorization'] = `Bearer ${options.authToken}`;
 
-  const { apiKey: _apiKey, ...restOptions } = options ?? {};
+  const { apiKey: _apiKey, authToken: _authToken, ...restOptions } = options ?? {};
   const res = await fetch(`${API_URL}${path}`, { ...restOptions, headers });
 
   if (!res.ok) throw new Error(await res.text());
@@ -143,6 +144,14 @@ export const api = {
       body: JSON.stringify(data),
     });
     return { token: raw.token, apiKey: raw.api_key, storeId: raw.store_id };
+  },
+
+  regenerateKey: async (token: string): Promise<{ apiKey: string }> => {
+    const raw = await apiFetch<{ api_key: string }>('/auth/regenerate-key', {
+      method: 'POST',
+      authToken: token,
+    });
+    return { apiKey: raw.api_key };
   },
 
   verify: async (apiKey: string): Promise<VerifyResponse> => {

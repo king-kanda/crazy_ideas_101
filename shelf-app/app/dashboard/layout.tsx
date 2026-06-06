@@ -189,6 +189,34 @@ function Sidebar({ storeName, lastSync, email }: { storeName: string; lastSync: 
         })}
       </nav>
 
+      {/* Settings link */}
+      <div style={{ padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+        <Link
+          href="/dashboard/settings"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 20px',
+            color: pathname === '/dashboard/settings' ? 'var(--accent)' : 'var(--text-muted)',
+            borderLeft: pathname === '/dashboard/settings' ? '2px solid var(--accent)' : '2px solid transparent',
+            background: pathname === '/dashboard/settings' ? 'rgba(245,158,11,0.06)' : 'transparent',
+            fontSize: 13,
+            textDecoration: 'none',
+            transition: 'color 0.12s, background 0.12s',
+            letterSpacing: '0.02em',
+          }}
+        >
+          <span style={{ opacity: pathname === '/dashboard/settings' ? 1 : 0.6 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1.06 1.06M11.84 11.84l1.06 1.06M3.1 12.9l1.06-1.06M11.84 4.16l1.06-1.06" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+            </svg>
+          </span>
+          Settings
+        </Link>
+      </div>
+
       {/* User info */}
       <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
         <UserAvatar email={email} />
