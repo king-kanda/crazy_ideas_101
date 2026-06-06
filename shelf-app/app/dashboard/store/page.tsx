@@ -5,6 +5,7 @@ import { getAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import type { StoreResponse } from '@/lib/api';
 import CartFunnel from '@/components/CartFunnel';
+import Tooltip from '@/components/Tooltip';
 
 // ── Mock data ──────────────────────────────────────────────────
 
@@ -111,18 +112,21 @@ export default function StorePage() {
           {/* Stat cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, border: '1px solid var(--border)' }}>
             {[
-              { label: 'Page Views', value: data.funnel[0]?.count.toLocaleString() ?? '—' },
-              { label: 'Add to Cart', value: data.funnel[1]?.count.toLocaleString() ?? '—' },
-              { label: 'Checkouts', value: data.funnel[2]?.count.toLocaleString() ?? '—' },
-              { label: 'Purchases', value: data.funnel[3]?.count.toLocaleString() ?? '—' },
-            ].map((stat) => (
+              { label: 'Page Views',  value: data.funnel[0]?.count.toLocaleString() ?? '—', tip: 'Total product page views recorded by the plugin.' },
+              { label: 'Add to Cart', value: data.funnel[1]?.count.toLocaleString() ?? '—', tip: 'Number of add-to-cart events captured — buyers who showed strong purchase intent.' },
+              { label: 'Checkouts',   value: data.funnel[2]?.count.toLocaleString() ?? '—', tip: 'Buyers who proceeded to checkout after adding items to cart.' },
+              { label: 'Purchases',   value: data.funnel[3]?.count.toLocaleString() ?? '—', tip: 'Completed purchase events recorded. This is your conversion end-point.' },
+            ].map((stat, i, arr) => (
               <div
                 key={stat.label}
                 className="card"
-                style={{ border: 'none', borderRight: '1px solid var(--border)', padding: '16px 20px' }}
+                style={{ border: 'none', borderRight: i < arr.length - 1 ? '1px solid var(--border)' : 'none', padding: '16px 20px' }}
               >
                 <div className="stat-value">{stat.value}</div>
-                <div className="stat-label">{stat.label}</div>
+                <div className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {stat.label}
+                  <Tooltip text={stat.tip} />
+                </div>
               </div>
             ))}
           </div>
@@ -130,7 +134,10 @@ export default function StorePage() {
           {/* High abandon products */}
           <section>
             <div className="section-header">
-              <span>High Abandonment Products</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                High Abandonment Products
+                <Tooltip text="Products frequently added to cart but not purchased. A high abandon rate suggests price sensitivity, shipping costs, or missing trust signals." />
+              </span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
                 {data.highAbandonProducts.length} products
               </span>
@@ -142,7 +149,12 @@ export default function StorePage() {
                     <th>Product</th>
                     <th>SKU</th>
                     <th style={{ textAlign: 'right' }}>Adds to Cart</th>
-                    <th style={{ textAlign: 'right' }}>Abandon Rate</th>
+                    <th style={{ textAlign: 'right' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        Abandon Rate
+                        <Tooltip text="Percentage of add-to-cart events for this product that did not result in a purchase." />
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -176,7 +188,10 @@ export default function StorePage() {
           {/* Top sellers */}
           <section>
             <div className="section-header">
-              <span>Top Sellers</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                Top Sellers
+                <Tooltip text="Products ranked by completed purchases. Use this to identify what's working and inform restocking decisions." />
+              </span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
                 {data.topSellers.length} products
               </span>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { isAuthenticated, getAuth, clearAuth, saveAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import ThemeToggle from '@/components/ThemeToggle';
+import Tooltip from '@/components/Tooltip';
 
 // ── Nav item data ──────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
   {
     href: '/dashboard/demand',
     label: 'Demand',
+    tip: 'Search trends, AI-powered gap analysis, and Google Trends cross-reference for your store.',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M1 12l4-4 3 3 4-5 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
@@ -22,6 +24,7 @@ const NAV_ITEMS = [
   {
     href: '/dashboard/store',
     label: 'Store Health',
+    tip: 'Cart funnel conversion, top-selling products, and high cart-abandonment products.',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="1" y="9" width="3" height="6" stroke="currentColor" strokeWidth="1.5" />
@@ -33,6 +36,7 @@ const NAV_ITEMS = [
   {
     href: '/dashboard/activity',
     label: 'Activity',
+    tip: 'Visitor traffic patterns — 7-day trend, 24-hour distribution, peak hours, and marketing timing advice.',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
@@ -196,7 +200,8 @@ function Sidebar({
               }}
             >
               <span style={{ opacity: isActive ? 1 : 0.6 }}>{item.icon}</span>
-              {item.label}
+              <span style={{ flex: 1 }}>{item.label}</span>
+              <Tooltip text={item.tip} />
             </Link>
           );
         })}

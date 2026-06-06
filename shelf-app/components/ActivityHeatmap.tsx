@@ -13,6 +13,7 @@ import {
   Cell,
 } from 'recharts';
 import type { ActivityResponse } from '@/lib/api';
+import Tooltip from './Tooltip';
 
 interface Props {
   data: ActivityResponse;
@@ -124,12 +125,13 @@ export default function ActivityHeatmap({ data }: Props) {
       {/* ── Summary stats ───────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, border: '1px solid var(--border)' }}>
         {[
-          { value: totalUniqueVisitors.toLocaleString(), label: 'Avg Daily Visitors' },
-          { value: totalPageViews.toLocaleString(), label: '7-Day Page Views' },
-          { value: peakHours.length > 0 ? fmt12h(peakHours[0].hour) : '—', label: 'Peak Hour' },
+          { value: totalUniqueVisitors.toLocaleString(), label: 'Avg Daily Visitors', tip: 'Average number of active users recorded per day over the tracked period.' },
+          { value: totalPageViews.toLocaleString(), label: '7-Day Page Views', tip: 'Total page views logged across all 7 days of recorded activity data.' },
+          { value: peakHours.length > 0 ? fmt12h(peakHours[0].hour) : '—', label: 'Peak Hour', tip: 'The hour of day with the highest average active user count across all recorded days.' },
           {
             value: dailyTrend === 'rising' ? '↑ Rising' : dailyTrend === 'falling' ? '↓ Falling' : '→ Stable',
             label: 'Weekly Trend',
+            tip: 'Direction of traffic change comparing the first half vs second half of your 7-day window. Rising = second half outpaces first half by >10%.',
             valueColor: dailyTrend === 'rising' ? 'var(--success)' : dailyTrend === 'falling' ? 'var(--danger)' : 'var(--text)',
           },
         ].map((stat, i, arr) => (
@@ -145,7 +147,10 @@ export default function ActivityHeatmap({ data }: Props) {
             <div className="stat-value" style={{ color: (stat as { valueColor?: string }).valueColor }}>
               {stat.value}
             </div>
-            <div className="stat-label">{stat.label}</div>
+            <div className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              {stat.label}
+              <Tooltip text={(stat as { tip: string }).tip} />
+            </div>
           </div>
         ))}
       </div>
@@ -154,7 +159,10 @@ export default function ActivityHeatmap({ data }: Props) {
       {daily.length > 0 && (
         <section>
           <div className="section-header">
-            <span>7-Day Traffic Trend</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            7-Day Traffic Trend
+            <Tooltip text="Daily active users and page views over the last 7 days. The solid line is users; the dashed line is page views." />
+          </span>
             <span
               style={{
                 fontSize: 10,
@@ -226,7 +234,10 @@ export default function ActivityHeatmap({ data }: Props) {
       {/* ── 24-Hour Distribution ────────────────────────────── */}
       <section>
         <div className="section-header">
-          <span>24-Hour Distribution</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            24-Hour Distribution
+            <Tooltip text="How traffic is spread across each hour of the day, aggregated across all recorded days. Amber bars highlight your top peak hours." />
+          </span>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
             Active users per hour
           </span>
@@ -269,7 +280,10 @@ export default function ActivityHeatmap({ data }: Props) {
       {/* ── Time-Block Breakdown ─────────────────────────────── */}
       <section>
         <div className="section-header">
-          <span>Traffic by Time Block</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            Traffic by Time Block
+            <Tooltip text="Share of total daily traffic falling in each part of the day. Helps identify when your audience is most active at a glance." />
+          </span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {BLOCK_LABELS.map((label, bi) => {
@@ -352,7 +366,10 @@ export default function ActivityHeatmap({ data }: Props) {
       {/* ── Marketing Timing Recommendations ────────────────── */}
       <section>
         <div className="section-header">
-          <span>Marketing Timing Recommendations</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            Marketing Timing Recommendations
+            <Tooltip text="Actionable campaign timing advice derived from your store's peak hour pattern and weekly traffic trend. No AI — pure traffic data." />
+          </span>
           <span style={{ fontSize: 9, fontFamily: 'DM Mono, monospace', color: 'var(--text-faint)', padding: '3px 8px', border: '1px solid var(--border)', letterSpacing: '0.08em' }}>
             BASED ON YOUR TRAFFIC PATTERN
           </span>
