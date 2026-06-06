@@ -41,9 +41,70 @@ const NAV_ITEMS = [
   },
 ];
 
+// ── Helpers ────────────────────────────────────────────────────
+
+function getEmailFromToken(token: string): string {
+  try {
+    return JSON.parse(atob(token.split('.')[1])).email ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function UserAvatar({ email }: { email: string }) {
+  const initial = email ? email[0].toUpperCase() : '?';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          background: 'var(--accent)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 14,
+          fontWeight: 700,
+          color: '#000',
+          fontFamily: 'Syne, sans-serif',
+          flexShrink: 0,
+        }}
+      >
+        {initial}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--text)',
+            fontWeight: 500,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.02em',
+          }}
+        >
+          {email || '—'}
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: 'var(--text-muted)',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            marginTop: 2,
+          }}
+        >
+          Store Owner
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Sidebar ────────────────────────────────────────────────────
 
-function Sidebar({ storeName, lastSync }: { storeName: string; lastSync: string }) {
+function Sidebar({ storeName, lastSync, email }: { storeName: string; lastSync: string; email: string }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -128,10 +189,15 @@ function Sidebar({ storeName, lastSync }: { storeName: string; lastSync: string 
         })}
       </nav>
 
+      {/* User info */}
+      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
+        <UserAvatar email={email} />
+      </div>
+
       {/* Footer */}
       <div
         style={{
-          padding: '16px 20px',
+          padding: '12px 20px 16px',
           borderTop: '1px solid var(--border)',
         }}
       >
@@ -141,7 +207,7 @@ function Sidebar({ storeName, lastSync }: { storeName: string; lastSync: string 
               fontSize: 11,
               color: 'var(--text-muted)',
               letterSpacing: '0.04em',
-              marginBottom: 4,
+              marginBottom: 2,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -156,7 +222,7 @@ function Sidebar({ storeName, lastSync }: { storeName: string; lastSync: string 
               fontSize: 10,
               color: 'var(--text-faint)',
               letterSpacing: '0.04em',
-              marginBottom: 12,
+              marginBottom: 10,
             }}
           >
             Synced {lastSync}
@@ -266,22 +332,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [storeName, setStoreName] = useState('');
   const [lastSync, setLastSync] = useState('—');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.replace('/login');
       return;
     }
-    // Pull any cached store info; real data fetched in individual pages
     const stored = localStorage.getItem('shelf_store_name');
     if (stored) setStoreName(stored);
     const sync = localStorage.getItem('shelf_last_sync');
     if (sync) setLastSync(sync);
+    const token = localStorage.getItem('shelf_token');
+    if (token) setEmail(getEmailFromToken(token));
   }, [router]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar storeName={storeName} lastSync={lastSync} />
+      <Sidebar storeName={storeName} lastSync={lastSync} email={email} />
       <div style={{ marginLeft: 220, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopBar storeName={storeName} lastSync={lastSync} />
         <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>{children}</main>
