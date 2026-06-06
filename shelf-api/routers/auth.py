@@ -5,8 +5,8 @@ from sqlalchemy import select
 
 from database import get_db
 from models import Store
-from schemas import SignupRequest, SignupResponse, VerifyResponse
-from auth import hash_password, create_jwt, get_store_from_api_key
+from schemas import SignupRequest, LoginRequest, SignupResponse, VerifyResponse
+from auth import hash_password, verify_password, create_jwt, get_store_from_api_key
 
 router = APIRouter()
 
@@ -39,6 +39,19 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
 
     token = create_jwt(str(store.id), store.owner_email)
     return SignupResponse(token=token, api_key=new_api_key, store_id=str(store.id))
+
+
+@router.post("/login", response_model=SignupResponse)
+async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Store).where(Store.owner_email == body.email))
+    store = result.scalars().first()
+    if not store or not verify_password(body.password, store.owner_password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+    token = create_jwt(str(store.id), store.owner_email)
+    return SignupResponse(token=token, api_key=store.api_key, store_id=str(store.id))
 
 
 @router.get("/verify", response_model=VerifyResponse)

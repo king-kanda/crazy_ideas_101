@@ -16,6 +16,11 @@ class SignupRequest(BaseModel):
     location_city: Optional[str] = None
 
 
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class SignupResponse(BaseModel):
     token: str
     api_key: str

@@ -137,11 +137,13 @@ export const api = {
     return { token: raw.token, apiKey: raw.api_key, storeId: raw.store_id };
   },
 
-  login: (data: LoginData) =>
-    apiFetch<AuthResponse>('/auth/login', {
+  login: async (data: LoginData): Promise<AuthResponse> => {
+    const raw = await apiFetch<RawAuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
+    });
+    return { token: raw.token, apiKey: raw.api_key, storeId: raw.store_id };
+  },
 
   verify: async (apiKey: string): Promise<VerifyResponse> => {
     const raw = await apiFetch<{ verified: boolean; store_name: string; store_id: string }>(
