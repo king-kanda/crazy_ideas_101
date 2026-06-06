@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://shelf-7a6211a30e15.herokuapp.com';
 
 // ── Request types ──────────────────────────────────────────────
 

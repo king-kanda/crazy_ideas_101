@@ -17,7 +17,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'SHELF_VERSION', '1.5.0' );
-define( 'SHELF_API_URL', 'https://api.shelf.io' );
+define( 'SHELF_API_URL', 'https://shelf-7a6211a30e15.herokuapp.com' );
 define( 'SHELF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SHELF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
