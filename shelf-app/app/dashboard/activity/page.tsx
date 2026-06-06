@@ -19,8 +19,23 @@ function buildMockHourly() {
   }));
 }
 
+function buildMockDaily() {
+  const base = [142, 158, 136, 171, 189, 204, 197];
+  const today = new Date();
+  return base.map((v, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    return {
+      date: d.toISOString().split('T')[0],
+      activeUsers: v,
+      pageViews: v * 3 + Math.floor(Math.random() * 50),
+    };
+  });
+}
+
 const MOCK_DATA: ActivityResponse = {
   hourly: buildMockHourly(),
+  daily: buildMockDaily(),
   peakHours: [
     { hour: 18, activeUsers: 210, label: 'Evening rush — post-work browsing' },
     { hour: 19, activeUsers: 195, label: 'Sustained evening traffic' },

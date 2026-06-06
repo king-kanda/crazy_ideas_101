@@ -15,7 +15,7 @@ from models import Store, Product, SearchEvent, CartEvent, ActivityLog, TrendCac
 from schemas import (
     DemandInsights, TopSearch, TrendKeyword, DemandGap,
     StoreInsights, TopSeller, DeadStock, HighAbandonProduct, CartFunnel,
-    ActivityInsights, HeatmapEntry,
+    ActivityInsights, HeatmapEntry, DailyActivity,
 )
 from auth import get_store_from_api_key, get_store_from_jwt
 
@@ -96,8 +96,11 @@ async def demand_insights(store_id: str, db: AsyncSession = Depends(get_db)):
                         "content": (
                             "Given the buyer search data and trend signals below, identify the top 5 demand gaps "
                             "— things buyers are clearly looking for that this store does not adequately stock or describe.\n"
-                            "Be specific. Reference actual search queries and product names. Return a JSON array only:\n"
-                            '[{ "signal": "...", "severity": "high|medium|low" }]\n\n'
+                            "Be specific. Reference actual search queries and product names when possible.\n"
+                            "Return a JSON array only (no markdown, no preamble):\n"
+                            '[{ "signal": "Detailed explanation referencing the data", "severity": "high|medium|low", '
+                            '"category": "product category this gap belongs to", '
+                            '"action": "Specific actionable step the store owner should take" }]\n\n'
                             f"Store products: {json.dumps(products_list)}\n"
                             f"Top zero-result searches: {json.dumps(zero_result_searches)}\n"
                             f"Trending keywords (location: {geo}): {json.dumps(trends_summary)}"
@@ -109,7 +112,15 @@ async def demand_insights(store_id: str, db: AsyncSession = Depends(get_db)):
             )
             raw = response.choices[0].message.content
             parsed = json.loads(raw)
-            gaps = [DemandGap(signal=g["signal"], severity=g["severity"]) for g in parsed]
+            gaps = [
+                DemandGap(
+                    signal=g["signal"],
+                    severity=g["severity"],
+                    category=g.get("category"),
+                    action=g.get("action"),
+                )
+                for g in parsed
+            ]
         except Exception:
             gaps = []
 
@@ -251,26 +262,30 @@ async def activity_insights(store_id: str, db: AsyncSession = Depends(get_db)):
         for log in logs
     ]
 
-    # Peak hours: aggregate active_users by hour-of-day across all days
+    # Peak hours + daily stats
     hour_totals: dict = defaultdict(int)
-    day_set: set = set()
+    day_users: dict = defaultdict(int)
+    day_views: dict = defaultdict(int)
+
     for log in logs:
         hour_totals[log.hour_bucket.hour] += log.active_users
-        day_set.add(log.hour_bucket.date())
+        date_key = log.hour_bucket.strftime("%Y-%m-%d")
+        day_users[date_key] += log.active_users
+        day_views[date_key] += log.page_views
 
-    # Top 3 hours of day by total active users
     sorted_hours = sorted(hour_totals.items(), key=lambda x: x[1], reverse=True)
     peak_hours = [f"{h:02d}:00" for h, _ in sorted_hours[:3]]
 
-    # Average daily users
-    if day_set:
-        total_users = sum(log.active_users for log in logs)
-        avg_daily_users = round(total_users / len(day_set), 2)
-    else:
-        avg_daily_users = 0.0
+    avg_daily_users = round(sum(day_users.values()) / len(day_users), 2) if day_users else 0.0
+
+    daily = [
+        DailyActivity(date=date, active_users=day_users[date], page_views=day_views[date])
+        for date in sorted(day_users.keys())
+    ]
 
     return ActivityInsights(
         heatmap=heatmap,
+        daily=daily,
         peak_hours=peak_hours,
         avg_daily_users=avg_daily_users,
     )

@@ -128,6 +128,8 @@ class TrendKeyword(BaseModel):
 class DemandGap(BaseModel):
     signal: str
     severity: str
+    category: Optional[str] = None
+    action: Optional[str] = None
 
 
 class DemandInsights(BaseModel):
@@ -177,7 +179,14 @@ class HeatmapEntry(BaseModel):
     active_users: int
 
 
+class DailyActivity(BaseModel):
+    date: str
+    active_users: int
+    page_views: int
+
+
 class ActivityInsights(BaseModel):
     heatmap: List[HeatmapEntry]
+    daily: List[DailyActivity]
     peak_hours: List[str]
     avg_daily_users: float

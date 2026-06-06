@@ -72,6 +72,7 @@ export interface DemandGap {
   signal: string;
   severity: 'high' | 'medium' | 'low';
   category?: string;
+  action?: string;
 }
 
 export interface DemandResponse {
@@ -120,8 +121,15 @@ export interface PeakHour {
   label: string;
 }
 
+export interface DailyActivity {
+  date: string;
+  activeUsers: number;
+  pageViews: number;
+}
+
 export interface ActivityResponse {
   hourly: HourlyActivity[];
+  daily: DailyActivity[];
   peakHours: PeakHour[];
   totalUniqueVisitors: number;
   generatedAt: string;
@@ -200,6 +208,7 @@ export const api = {
         signal:   g.signal as string,
         severity: g.severity as 'high' | 'medium' | 'low',
         category: g.category as string | undefined,
+        action:   g.action as string | undefined,
       })),
       generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
     };
@@ -283,7 +292,7 @@ export const api = {
     return {
       topSearches: searches.map((s) => ({ query: s.query as string, count: s.count as number, zeroResults: s.zero_results as boolean })),
       trendingKeywords: trends.map((t) => ({ keyword: t.keyword as string, score: (t.interest ?? 0) as number, delta: 0 })),
-      demandGaps: gaps.map((g, i) => ({ id: (g.id ?? String(i)) as string, signal: g.signal as string, severity: g.severity as 'high' | 'medium' | 'low' })),
+      demandGaps: gaps.map((g, i) => ({ id: (g.id ?? String(i)) as string, signal: g.signal as string, severity: g.severity as 'high' | 'medium' | 'low', category: g.category as string | undefined, action: g.action as string | undefined })),
       generatedAt: new Date().toISOString(),
     };
   },
@@ -361,8 +370,16 @@ export const api = {
       };
     });
 
+    const dailyRaw = (raw.daily ?? []) as Array<Record<string, unknown>>;
+    const daily: DailyActivity[] = dailyRaw.map((d) => ({
+      date: d.date as string,
+      activeUsers: (d.active_users ?? d.activeUsers ?? 0) as number,
+      pageViews: (d.page_views ?? d.pageViews ?? 0) as number,
+    }));
+
     return {
       hourly,
+      daily,
       peakHours,
       totalUniqueVisitors: (raw.avg_daily_users ?? raw.totalUniqueVisitors ?? 0) as number,
       generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
