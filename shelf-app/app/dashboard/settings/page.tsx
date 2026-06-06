@@ -520,6 +520,202 @@ function StoreTab({ token }: { token: string }) {
   );
 }
 
+// ── Tab: Demo ──────────────────────────────────────────────────
+
+interface DemoStatus {
+  loaded: boolean;
+  counts: { products?: number; cart_events?: number; search_events?: number; activity_logs?: number };
+}
+
+function DemoTab({ token }: { token: string }) {
+  const [status, setStatus] = useState<DemoStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [loadResult, setLoadResult] = useState<{ products_created: number; used_real_products: boolean; cart_events: number; search_events: number; activity_logs: number } | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.labs.demoStatus(token)
+      .then(setStatus)
+      .catch(() => setError('Could not fetch demo status.'))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  async function handleLoad() {
+    setWorking(true);
+    setError('');
+    setLoadResult(null);
+    try {
+      const res = await api.labs.demoLoad(token);
+      setLoadResult(res);
+      setStatus({ loaded: true, counts: { products: res.products_created || undefined, cart_events: res.cart_events, search_events: res.search_events, activity_logs: res.activity_logs } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load demo data.');
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function handleDelete() {
+    setWorking(true);
+    setError('');
+    setLoadResult(null);
+    try {
+      await api.labs.demoDelete(token);
+      setStatus({ loaded: false, counts: {} });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete demo data.');
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  if (loading) {
+    return <div style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.08em', padding: '32px 0' }}>LOADING...</div>;
+  }
+
+  const INCLUDES = [
+    { icon: '📦', label: 'Products', detail: 'Up to 12 niche-matched products (uses your real catalog if 5+ already synced)' },
+    { icon: '🛒', label: 'Cart Events', detail: 'Add-to-cart, abandoned, and purchase events — with realistic top sellers and high-abandonment products' },
+    { icon: '🔍', label: 'Search Events', detail: 'Mix of found searches and zero-result gap signals matching your store niche' },
+    { icon: '📊', label: 'Activity Logs', detail: '7 days of hourly active-user and page-view data with realistic traffic patterns' },
+  ];
+
+  return (
+    <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* Status banner */}
+      <div
+        className="card"
+        style={{
+          padding: '18px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          borderColor: status?.loaded ? 'rgba(245,158,11,0.4)' : 'var(--border)',
+          background: status?.loaded ? 'rgba(245,158,11,0.05)' : 'var(--card)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: status?.loaded ? 'var(--accent)' : 'var(--border)',
+              flexShrink: 0,
+            }}
+          />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+              Demo Mode — {status?.loaded ? 'ON' : 'OFF'}
+            </div>
+            {status?.loaded && status.counts && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                {[
+                  status.counts.products && `${status.counts.products} products`,
+                  status.counts.cart_events && `${status.counts.cart_events} cart events`,
+                  status.counts.search_events && `${status.counts.search_events} searches`,
+                  status.counts.activity_logs && `${status.counts.activity_logs} activity logs`,
+                ].filter(Boolean).join(' · ')}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          {!status?.loaded && (
+            <button
+              onClick={handleLoad}
+              disabled={working}
+              className="btn-primary"
+              style={{ fontSize: 10, padding: '7px 16px' }}
+            >
+              {working ? 'LOADING...' : 'LOAD DEMO DATA'}
+            </button>
+          )}
+          {status?.loaded && (
+            <button
+              onClick={handleDelete}
+              disabled={working}
+              style={{
+                fontSize: 10,
+                padding: '7px 16px',
+                background: 'transparent',
+                border: '1px solid rgba(239,68,68,0.5)',
+                color: 'var(--danger)',
+                cursor: 'pointer',
+                fontFamily: 'DM Mono, monospace',
+                letterSpacing: '0.08em',
+                fontWeight: 600,
+                textTransform: 'uppercase' as const,
+              }}
+            >
+              {working ? 'DELETING...' : 'DELETE DEMO DATA'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Load result */}
+      {loadResult && (
+        <div
+          style={{
+            padding: '12px 16px',
+            border: '1px solid rgba(34,197,94,0.3)',
+            background: 'rgba(34,197,94,0.06)',
+            fontSize: 12,
+            color: 'var(--success)',
+            lineHeight: 1.7,
+          }}
+        >
+          ✓ Demo data loaded
+          {loadResult.used_real_products
+            ? ' — using your existing product catalog'
+            : ` — created ${loadResult.products_created} demo products`}
+          {` · ${loadResult.cart_events} cart events · ${loadResult.search_events} searches · ${loadResult.activity_logs} activity logs`}
+        </div>
+      )}
+
+      {error && (
+        <div style={{ padding: '10px 14px', border: '1px solid var(--danger)', background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', fontSize: 12 }}>
+          {error}
+        </div>
+      )}
+
+      {/* What's included */}
+      <div className="card" style={{ padding: 24 }}>
+        <div className="section-header" style={{ marginBottom: 16 }}>What Demo Mode Populates</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {INCLUDES.map((item) => (
+            <div key={item.label} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <div style={{ fontSize: 18, flexShrink: 0, lineHeight: 1 }}>{item.icon}</div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>{item.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div
+          style={{
+            marginTop: 20,
+            padding: '10px 14px',
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
+            fontSize: 11,
+            color: 'var(--text-muted)',
+            lineHeight: 1.6,
+          }}
+        >
+          Demo data appears across <strong style={{ color: 'var(--text)' }}>Store Health</strong>, <strong style={{ color: 'var(--text)' }}>Activity</strong>, and <strong style={{ color: 'var(--text)' }}>Demand</strong> dashboards. Deleting it removes all tagged records cleanly without affecting real data.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Tab: Labs ──────────────────────────────────────────────────
 
 type CheckStatus = 'idle' | 'loading' | 'ok' | 'error';
@@ -712,6 +908,7 @@ const TABS = [
   { id: 'apikey', label: 'API KEY' },
   { id: 'plugin', label: 'PLUGIN' },
   { id: 'store', label: 'STORE' },
+  { id: 'demo', label: 'DEMO' },
   { id: 'labs', label: 'LABS' },
 ] as const;
 
@@ -772,6 +969,7 @@ function SettingsInner() {
       {activeTab === 'apikey' && <ApiKeyTab apiKey={apiKey} token={token} />}
       {activeTab === 'plugin' && <PluginTab apiKey={apiKey} />}
       {activeTab === 'store' && token && <StoreTab token={token} />}
+      {activeTab === 'demo' && token && <DemoTab token={token} />}
       {activeTab === 'labs' && token && <LabsTab token={token} />}
     </div>
   );

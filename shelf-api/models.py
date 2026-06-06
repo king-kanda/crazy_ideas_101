@@ -23,6 +23,7 @@ class Store(Base):
     location_city = Column(Text)
     api_key = Column(Text, unique=True, nullable=False)
     plugin_site_url = Column(Text, nullable=True)
+    demo_loaded = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     products = relationship("Product", back_populates="store", cascade="all, delete-orphan")
@@ -42,6 +43,7 @@ class Product(Base):
     category = Column(Text)
     price = Column(Numeric(10, 2))
     stock_status = Column(Text)
+    is_demo = Column(Boolean, default=False)
     synced_at = Column(DateTime, default=datetime.utcnow)
 
     store = relationship("Store", back_populates="products")
@@ -56,6 +58,7 @@ class SearchEvent(Base):
     query = Column(Text, nullable=False)
     results_count = Column(Integer, default=0)
     user_found_product = Column(Boolean, default=False)
+    is_demo = Column(Boolean, default=False)
     occurred_at = Column(DateTime, nullable=False)
 
     store = relationship("Store", back_populates="search_events")
@@ -70,6 +73,7 @@ class CartEvent(Base):
     product_id = Column(UUID(as_uuid=True), ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
     wc_product_id = Column(Integer, nullable=True)
     session_id = Column(Text)
+    is_demo = Column(Boolean, default=False)
     occurred_at = Column(DateTime, nullable=False)
 
     store = relationship("Store", back_populates="cart_events")
@@ -84,6 +88,7 @@ class ActivityLog(Base):
     hour_bucket = Column(DateTime, nullable=False)
     active_users = Column(Integer, default=0)
     page_views = Column(Integer, default=0)
+    is_demo = Column(Boolean, default=False)
 
     store = relationship("Store", back_populates="activity_logs")
 

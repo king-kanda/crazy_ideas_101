@@ -33,8 +33,14 @@ async def get_db() -> AsyncSession:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(
-            __import__("sqlalchemy").text(
-                "ALTER TABLE stores ADD COLUMN IF NOT EXISTS plugin_site_url TEXT"
-            )
-        )
+        from sqlalchemy import text
+        migrations = [
+            "ALTER TABLE stores ADD COLUMN IF NOT EXISTS plugin_site_url TEXT",
+            "ALTER TABLE stores ADD COLUMN IF NOT EXISTS demo_loaded BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE search_events ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE cart_events ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE",
+        ]
+        for sql in migrations:
+            await conn.execute(text(sql))

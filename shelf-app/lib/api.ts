@@ -254,6 +254,38 @@ export const api = {
       apiFetch<{ ok: boolean; keyword?: string; geo?: string; avg_interest?: number; response_time_ms?: number; error?: string }>(
         '/labs/trends', { authToken: token }
       ),
+    demoStatus: async (token: string) =>
+      apiFetch<{
+        loaded: boolean;
+        counts: { products?: number; cart_events?: number; search_events?: number; activity_logs?: number };
+      }>('/labs/demo/status', { authToken: token }),
+    demoLoad: async (token: string) =>
+      apiFetch<{
+        loaded: boolean;
+        products_created: number;
+        used_real_products: boolean;
+        cart_events: number;
+        search_events: number;
+        activity_logs: number;
+      }>('/labs/demo/load', { method: 'POST', authToken: token }),
+    demoDelete: async (token: string) =>
+      apiFetch<{ deleted: boolean }>('/labs/demo', { method: 'DELETE', authToken: token }),
+  },
+
+  refreshDemand: async (storeId: string, token: string): Promise<DemandResponse> => {
+    const raw = await apiFetch<Record<string, unknown>>(
+      `/insights/${storeId}/demand/refresh`,
+      { method: 'POST', authToken: token },
+    );
+    const searches = (raw.top_searches ?? []) as Array<Record<string, unknown>>;
+    const trends   = (raw.trend_keywords ?? []) as Array<Record<string, unknown>>;
+    const gaps     = (raw.gaps ?? []) as Array<Record<string, unknown>>;
+    return {
+      topSearches: searches.map((s) => ({ query: s.query as string, count: s.count as number, zeroResults: s.zero_results as boolean })),
+      trendingKeywords: trends.map((t) => ({ keyword: t.keyword as string, score: (t.interest ?? 0) as number, delta: 0 })),
+      demandGaps: gaps.map((g, i) => ({ id: (g.id ?? String(i)) as string, signal: g.signal as string, severity: g.severity as 'high' | 'medium' | 'low' })),
+      generatedAt: new Date().toISOString(),
+    };
   },
 
   getProfile: async (token: string): Promise<StoreProfile> => {

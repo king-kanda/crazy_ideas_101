@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from collections import defaultdict
@@ -16,7 +17,7 @@ from schemas import (
     StoreInsights, TopSeller, DeadStock, HighAbandonProduct, CartFunnel,
     ActivityInsights, HeatmapEntry,
 )
-from auth import get_store_from_api_key
+from auth import get_store_from_api_key, get_store_from_jwt
 
 router = APIRouter()
 
@@ -273,3 +274,82 @@ async def activity_insights(store_id: str, db: AsyncSession = Depends(get_db)):
         peak_hours=peak_hours,
         avg_daily_users=avg_daily_users,
     )
+
+
+# ── /insights/{store_id}/demand/refresh ──────────────────────────────────────
+
+@router.post("/{store_id}/demand/refresh", response_model=DemandInsights)
+async def refresh_demand(
+    store_id: str,
+    db: AsyncSession = Depends(get_db),
+    auth_store: Store = Depends(get_store_from_jwt),
+):
+    if str(auth_store.id) != store_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Store ID does not match token")
+
+    store = await _get_store_or_404(store_id, db)
+
+    # Build keyword list from niche + product categories
+    keywords: List[str] = []
+    if store.niche:
+        keywords.append(store.niche)
+
+    cat_rows = await db.execute(
+        select(Product.category)
+        .where(Product.store_id == store.id, Product.category.isnot(None))
+        .distinct()
+        .limit(9)
+    )
+    for row in cat_rows.all():
+        if row.category and row.category not in keywords:
+            keywords.append(row.category)
+
+    # Refresh trend cache synchronously
+    if keywords:
+        geo = store.location_country or "US"
+
+        def _run_trends() -> dict:
+            from pytrends.request import TrendReq
+            results: dict = {}
+            pt = TrendReq(hl="en-US", tz=0)
+            for i in range(0, len(keywords), 5):
+                batch = keywords[i: i + 5]
+                try:
+                    pt.build_payload(batch, geo=geo, timeframe="now 7-d")
+                    df = pt.interest_over_time()
+                    if df is not None and not df.empty:
+                        for kw in batch:
+                            results[kw] = int(df[kw].mean()) if kw in df.columns else 0
+                    else:
+                        for kw in batch:
+                            results[kw] = 0
+                except Exception:
+                    for kw in batch:
+                        results[kw] = 0
+            return results
+
+        try:
+            trend_scores = await asyncio.get_event_loop().run_in_executor(None, _run_trends)
+            fetched_at = datetime.utcnow()
+            for keyword, interest in trend_scores.items():
+                tc_result = await db.execute(
+                    select(TrendCache).where(
+                        TrendCache.store_id == store.id, TrendCache.keyword == keyword
+                    )
+                )
+                tc = tc_result.scalars().first()
+                if tc:
+                    tc.trend_data = {"interest": interest}
+                    tc.geo = geo
+                    tc.fetched_at = fetched_at
+                else:
+                    db.add(TrendCache(
+                        store_id=store.id, keyword=keyword, geo=geo,
+                        trend_data={"interest": interest}, fetched_at=fetched_at,
+                    ))
+            await db.commit()
+        except Exception:
+            pass  # trend refresh best-effort; demand analysis still runs
+
+    # Re-run demand analysis with fresh trend cache
+    return await demand_insights(store_id, db)
