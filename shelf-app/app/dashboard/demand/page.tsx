@@ -34,6 +34,7 @@ const MOCK_DATA: DemandResponse = {
     { id: '4', signal: 'Webcam searches up 42% WoW. Current stock may not meet projected demand spike.', severity: 'medium', category: 'cameras' },
     { id: '5', signal: '"Ergonomic mouse" queries growing — vertical mouse variants account for 60% of those searches.', severity: 'low', category: 'peripherals' },
   ],
+  productCategories: ['keyboards', 'hubs', 'furniture', 'cameras', 'peripherals'],
   generatedAt: new Date().toISOString(),
 };
 

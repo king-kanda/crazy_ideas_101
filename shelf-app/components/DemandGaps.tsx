@@ -6,7 +6,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Cell,
   Legend,
@@ -211,7 +211,7 @@ export default function DemandGaps({ data }: Props) {
                         tickLine={false}
                       />
                       <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11, fontFamily: 'DM Mono, monospace' }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                      <RechartsTooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                       <Legend
                         wrapperStyle={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: 'var(--text-muted)', paddingTop: 8 }}
                         iconSize={8}

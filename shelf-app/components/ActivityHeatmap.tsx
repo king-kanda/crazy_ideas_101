@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Cell,
 } from 'recharts';
@@ -190,7 +190,7 @@ export default function ActivityHeatmap({ data }: Props) {
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip content={<DailyTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
+                <RechartsTooltip content={<DailyTooltip />} cursor={{ stroke: 'var(--border)', strokeWidth: 1 }} />
                 <Line
                   type="monotone"
                   dataKey="activeUsers"
@@ -259,7 +259,7 @@ export default function ActivityHeatmap({ data }: Props) {
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip content={<HourlyTooltip />} cursor={{ fill: 'rgba(245,158,11,0.06)' }} />
+              <RechartsTooltip content={<HourlyTooltip />} cursor={{ fill: 'rgba(245,158,11,0.06)' }} />
               <Bar dataKey="activeUsers" radius={0}>
                 {hourly.map((entry) => {
                   const isPeak = peakHours.some((p) => p.hour === entry.hour);
