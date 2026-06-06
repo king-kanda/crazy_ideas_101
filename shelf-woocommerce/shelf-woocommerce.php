@@ -3,7 +3,7 @@
  * Plugin Name: Shelf for WooCommerce
  * Plugin URI:  https://shelf.io
  * Description: Connect your WooCommerce store to Shelf for buyer intelligence and analytics.
- * Version:     1.5.1
+ * Version:     1.5.2
  * Author:      Shelf
  * Author URI:  https://shelf.io
  * License:     GPL-2.0+
@@ -16,7 +16,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'SHELF_VERSION', '1.5.1' );
+define( 'SHELF_VERSION', '1.5.2' );
 define( 'SHELF_API_URL', 'https://shelf-7a6211a30e15.herokuapp.com' );
 define( 'SHELF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SHELF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
