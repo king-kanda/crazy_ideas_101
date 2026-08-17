@@ -11,8 +11,8 @@ export default function OnboardingPage() {
   useEffect(() => {
     // Allow new signups (pending creds in sessionStorage) and already-authenticated users
     const hasPendingSignup =
-      sessionStorage.getItem('shelf_pending_email') &&
-      sessionStorage.getItem('shelf_pending_password');
+      sessionStorage.getItem('palda_pending_email') &&
+      sessionStorage.getItem('palda_pending_password');
     if (!isAuthenticated() && !hasPendingSignup) router.replace('/signup');
   }, [router]);
 

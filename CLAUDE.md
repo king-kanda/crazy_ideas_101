@@ -57,12 +57,20 @@ Request bodies are sent in snake_case to match the Pydantic schemas.
 
 ## Design
 
-- Background: `#0F1117`
-- Accent: `#F59E0B` (amber/orange)
-- Fonts: `DM Mono` for data/numbers, `Syne` for headings
-- Cards: `#1E2130` border, no heavy shadows
-- Charts: Recharts, amber accent
-- No gradients, no purple, no pill buttons
+Colors follow the Palda design system in `shelf-app/.claude/designer/SKILL.md` (light off-white surfaces, lime accent). Only the color palette is inherited here — other rules (fonts, no gradients, no heavy shadows) remain project-specific.
+
+- Background: `#FAFAF7` (`--background`, warm off-white) — `oklch(0.982 0.004 106)`
+- Accent: `#C4F542` (`--lime`) — `oklch(0.92 0.2 122)`
+- Accent soft (filled badges): `#E3F5B4` (`--lime-soft`) — `oklch(0.95 0.09 122)`
+- Accent mist (tinted panels / hover): `#F0FBDD` (`--lime-mist`) — `oklch(0.975 0.045 124)`
+- Ink (icons, dark chips, text on lime): `#1F241E` (`--ink` / `--foreground`) — `oklch(0.21 0.008 145)`
+- Card surface: `#FFFFFF` (`--card`)
+- Muted text: `#6E756B` (`--muted-foreground`) — `oklch(0.53 0.012 145)`
+- Border (hairline): `#E7E7E2` (`--border`) — `oklch(0.918 0.006 106)`
+- Destructive (errors only): `#D84A3B` (`--destructive`) — `oklch(0.577 0.245 27.325)`
+- Fonts: `DM Mono` for data/numbers, `Syne` for headings (unchanged for the app; marketing surfaces per designer skill use Plus Jakarta Sans + Instrument Serif)
+- Charts: Recharts, lime accent
+- No gradients, no purple, no pill buttons (project override — designer skill uses pills on marketing site only)
 
 ## LLM Gap Generation (demand insights)
 

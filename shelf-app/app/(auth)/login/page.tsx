@@ -56,7 +56,7 @@ export default function LoginPage() {
               letterSpacing: '-0.04em',
             }}
           >
-            SHELF
+            PALDA
           </span>
           <div
             style={{

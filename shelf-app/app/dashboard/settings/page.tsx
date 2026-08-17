@@ -13,7 +13,7 @@ const INSTALL_STEPS = [
   'Download the plugin zip using the button above.',
   'In your WordPress admin go to Plugins → Add New → Upload Plugin.',
   'Choose the downloaded zip file and click Install Now.',
-  'Activate the plugin, then open Shelf → Settings in the WP Admin sidebar.',
+  'Activate the plugin, then open Palda → Settings in the WP Admin sidebar.',
   'Paste your API key into the API Key field and click Save.',
   'The plugin will start syncing products, searches, and cart events automatically.',
 ];
@@ -92,7 +92,7 @@ function ApiKeyTab({ apiKey, token }: { apiKey: string; token: string }) {
       <div className="card" style={{ padding: 28 }}>
         <div className="section-header" style={{ marginBottom: 20 }}>API Key</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.6 }}>
-          This key authenticates your WooCommerce plugin with the Shelf API. Keep it secret — anyone
+          This key authenticates your WooCommerce plugin with the Palda Commerce API. Keep it secret — anyone
           with this key can send data to your account.
         </p>
 
@@ -197,7 +197,7 @@ function PluginTab({ apiKey }: { apiKey: string }) {
       <div className="card" style={{ padding: 28 }}>
         <div className="section-header" style={{ marginBottom: 20 }}>Plugin Installation</div>
         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20, lineHeight: 1.6 }}>
-          Install the Shelf WooCommerce plugin on your WordPress store to start collecting buyer
+          Install the Palda Commerce WooCommerce plugin on your WordPress store to start collecting buyer
           intelligence. You need WordPress 6.0+ and WooCommerce 7.0+.
         </p>
 
@@ -208,7 +208,7 @@ function PluginTab({ apiKey }: { apiKey: string }) {
           className="btn-primary"
           style={{ display: 'inline-flex', fontSize: 11, padding: '9px 18px', marginBottom: 28, textDecoration: 'none' }}
         >
-          ↓ DOWNLOAD SHELF PLUGIN
+          ↓ DOWNLOAD PLUGIN
         </a>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

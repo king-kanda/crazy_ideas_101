@@ -1,8 +1,8 @@
-const TOKEN_KEY = 'shelf_token';
-const API_KEY_KEY = 'shelf_api_key';
-const STORE_ID_KEY = 'shelf_store_id';
-const STORE_NAME_KEY = 'shelf_store_name';
-const STORE_URL_KEY = 'shelf_store_url';
+const TOKEN_KEY = 'palda_token';
+const API_KEY_KEY = 'palda_api_key';
+const STORE_ID_KEY = 'palda_store_id';
+const STORE_NAME_KEY = 'palda_store_name';
+const STORE_URL_KEY = 'palda_store_url';
 
 export function saveAuth(
   token: string,

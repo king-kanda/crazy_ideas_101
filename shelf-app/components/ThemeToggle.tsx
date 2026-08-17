@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
   useEffect(() => {
-    const stored = localStorage.getItem('shelf_theme') as 'dark' | 'light' | null;
-    const resolved = stored ?? (document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null) ?? 'dark';
+    const stored = localStorage.getItem('palda_theme') as 'dark' | 'light' | null;
+    const resolved = stored ?? (document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null) ?? 'light';
     setTheme(resolved);
   }, []);
 
@@ -15,7 +15,7 @@ export default function ThemeToggle() {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('shelf_theme', next);
+    localStorage.setItem('palda_theme', next);
   }
 
   return (

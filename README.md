@@ -1,6 +1,6 @@
-# Shelf — WooCommerce Buyer Intelligence
+# Palda Commerce
 
-Shelf is a two-part buyer intelligence system: a central platform (Next.js + FastAPI) where store owners view demand insights, and a WordPress plugin that collects product, search, cart, and activity data from WooCommerce stores.
+Palda Commerce is the always-on layer between a merchant's ads, inbox, and checkout for Kenyan / East African WooCommerce stores. Built on top of the existing Shelf buyer-intelligence engine — the WooCommerce plugin below is reused as the storefront connector.
 
 ---
 
@@ -95,7 +95,7 @@ Builds the app then starts the production server.
 1. Download **[shelf-woocommerce.zip](https://github.com/king-kanda/crazy_ideas_101/blob/claude/inspiring-lamport-OoZhC/shelf-woocommerce.zip)**
 2. In WP Admin go to **Plugins → Add New → Upload Plugin**
 3. Upload the zip and activate it
-4. Navigate to **Shelf → Settings** in the WP Admin sidebar
+4. Navigate to **Palda → Settings** in the WP Admin sidebar
 5. Paste your API key (shown after onboarding) and click **Save**
 6. The API URL defaults to the live Heroku backend — change it only for local development
 
@@ -105,10 +105,10 @@ Builds the app then starts the production server.
 
 ```
 WordPress Store
-  └── Shelf WooCommerce Plugin (PHP)
+  └── Shelf WooCommerce Plugin (PHP, reused as Palda connector)
         ├── Hooks: product catalog, WP search, cart events, WC Analytics
-        ├── Admin: WP Admin → Shelf → Insights
-        └── POSTs data → Central API (X-Shelf-API-Key header)
+        ├── Admin: WP Admin → Palda → Insights
+        └── POSTs data → Central API (X-Shelf-API-Key header, kept for plugin compat)
 
 shelf-api/  (FastAPI + PostgreSQL + Redis/Celery)
   ├── POST /auth/signup

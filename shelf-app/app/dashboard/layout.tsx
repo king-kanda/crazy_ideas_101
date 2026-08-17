@@ -152,27 +152,52 @@ function Sidebar({
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <div
-          style={{
-            fontFamily: 'Syne, sans-serif',
-            fontSize: 22,
-            fontWeight: 800,
-            color: 'var(--accent)',
-            letterSpacing: '-0.04em',
-          }}
-        >
-          SHELF
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: 7,
+              background: 'var(--ink)',
+              flexShrink: 0,
+            }}
+          >
+            <span
+              style={{
+                width: 11,
+                height: 11,
+                borderRadius: 3,
+                background: 'var(--accent)',
+                display: 'inline-block',
+              }}
+            />
+          </span>
+          <div
+            style={{
+              fontFamily: 'Syne, sans-serif',
+              fontSize: 22,
+              fontWeight: 800,
+              color: 'var(--ink)',
+              letterSpacing: '-0.04em',
+            }}
+          >
+            PALDA
+          </div>
         </div>
         <div
           style={{
-            marginTop: 3,
+            marginTop: 6,
             fontSize: 10,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
             color: 'var(--text-muted)',
           }}
         >
-          Buyer Intelligence
+          Commerce
         </div>
       </div>
 
@@ -476,7 +501,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (auth.storeName) setStoreName(auth.storeName);
     if (auth.storeUrl) setStoreUrl(auth.storeUrl);
-    const sync = localStorage.getItem('shelf_last_sync');
+    const sync = localStorage.getItem('palda_last_sync');
     if (sync) setLastSync(sync);
     setEmail(getEmailFromToken(auth.token));
 

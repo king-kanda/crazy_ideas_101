@@ -87,7 +87,7 @@ def _expand_category_seeds(category: str) -> list[str]:
 
 
 def _cache_key(store_id: str, geo: str, timeframe: str) -> str:
-    return f"shelf:trends:v2:{store_id}:{geo}:{timeframe}"
+    return f"palda:trends:v2:{store_id}:{geo}:{timeframe}"
 
 
 def _get_cached(store_id: str, geo: str, timeframe: str) -> dict | None:

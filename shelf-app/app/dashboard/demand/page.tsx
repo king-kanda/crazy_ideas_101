@@ -57,7 +57,7 @@ export default function DemandPage() {
     try {
       const res = await api.demand(auth.storeId, auth.apiKey);
       setData(res);
-      localStorage.setItem('shelf_last_sync', 'just now');
+      localStorage.setItem('palda_last_sync', 'just now');
       setNotice('');
     } catch {
       setData(MOCK_DATA);
@@ -77,7 +77,7 @@ export default function DemandPage() {
     try {
       const res = await api.refreshDemand(auth.storeId, auth.token);
       setData(res);
-      localStorage.setItem('shelf_last_sync', 'just now');
+      localStorage.setItem('palda_last_sync', 'just now');
       setNotice(`Analysis complete — trends refreshed for your store location and categories.`);
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Analysis failed. Try again.');

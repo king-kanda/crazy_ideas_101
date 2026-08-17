@@ -92,8 +92,8 @@ function Step1({ onNext }: { onNext: () => void }) {
     e.preventDefault();
     setError('');
 
-    const email = sessionStorage.getItem('shelf_pending_email');
-    const password = sessionStorage.getItem('shelf_pending_password');
+    const email = sessionStorage.getItem('palda_pending_email');
+    const password = sessionStorage.getItem('palda_pending_password');
 
     if (!email || !password) {
       setError('Session expired. Please go back and sign up again.');
@@ -112,8 +112,8 @@ function Step1({ onNext }: { onNext: () => void }) {
         location_city: form.city || undefined,
       });
       saveAuth(res.token, res.apiKey, res.storeId, form.storeName, form.storeUrl);
-      sessionStorage.removeItem('shelf_pending_email');
-      sessionStorage.removeItem('shelf_pending_password');
+      sessionStorage.removeItem('palda_pending_email');
+      sessionStorage.removeItem('palda_pending_password');
       onNext();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not create account. Please try again.');
@@ -296,7 +296,7 @@ function Step1({ onNext }: { onNext: () => void }) {
 
 function Step2({ onNext }: { onNext: () => void }) {
   const auth = getAuth();
-  const apiKey = auth?.apiKey ?? 'sk-shelf-••••••••••••••••';
+  const apiKey = auth?.apiKey ?? 'sk-palda-••••••••••••••••';
   const [copied, setCopied] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
@@ -328,7 +328,7 @@ function Step2({ onNext }: { onNext: () => void }) {
   const instructions = [
     {
       num: 1,
-      text: 'Download the Shelf plugin',
+      text: 'Download the Palda Commerce plugin',
       extra: (
         <a
           href="https://github.com/king-kanda/crazy_ideas_101/blob/claude/inspiring-lamport-OoZhC/shelf-woocommerce.zip"
@@ -342,7 +342,7 @@ function Step2({ onNext }: { onNext: () => void }) {
       ),
     },
     { num: 2, text: 'Go to WP Admin → Plugins → Add New → Upload Plugin' },
-    { num: 3, text: 'Activate the plugin, then navigate to Shelf → Settings' },
+    { num: 3, text: 'Activate the plugin, then navigate to Palda → Settings' },
     { num: 4, text: 'Paste your API key into the settings field and click Save' },
   ];
 
@@ -500,7 +500,7 @@ function Step3() {
           Store Connected
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          Your WooCommerce store is linked to Shelf.
+          Your WooCommerce store is linked to Palda Commerce.
         </p>
       </div>
 
@@ -578,7 +578,7 @@ export default function OnboardingWizard() {
               marginBottom: 4,
             }}
           >
-            SHELF
+            PALDA
           </div>
           <div
             style={{

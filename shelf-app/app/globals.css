@@ -1,28 +1,40 @@
+/* Palda Commerce — colors sourced from shelf-app/.claude/designer/SKILL.md */
 :root {
-  --bg: #0F1117;
-  --sidebar: #0D0F16;
-  --card: #13161F;
-  --border: #1E2130;
-  --accent: #F59E0B;
-  --accent-dim: rgba(245, 158, 11, 0.15);
-  --text: #E5E7EB;
-  --text-muted: #6B7280;
-  --text-faint: #374151;
-  --danger: #EF4444;
-  --warning: #F97316;
-  --success: #22C55E;
-  --row-hover: rgba(255, 255, 255, 0.02);
+  /* Light (brand default per designer skill) */
+  --bg: #FAFAF7;                  /* --background: warm off-white */
+  --sidebar: #F3F3F0;             /* --secondary */
+  --card: #FFFFFF;                /* --card */
+  --border: #E7E7E2;              /* --border, hairline */
+  --accent: #C4F542;              /* --lime */
+  --accent-dim: rgba(196, 245, 66, 0.18); /* lime @ ~18% for hover fills */
+  --accent-soft: #E3F5B4;         /* --lime-soft */
+  --accent-mist: #F0FBDD;         /* --lime-mist */
+  --ink: #1F241E;                 /* --ink */
+  --text: #1F241E;                /* --foreground */
+  --text-muted: #6E756B;          /* --muted-foreground */
+  --text-faint: #A6ADA2;
+  --danger: #D84A3B;              /* --destructive */
+  --warning: #C48A00;
+  --success: #4E7A2E;
+  --row-hover: rgba(31, 36, 30, 0.04);
 }
 
-[data-theme="light"] {
-  --bg: #F8F9FB;
-  --sidebar: #EDEEF1;
-  --card: #FFFFFF;
-  --border: #E5E7EB;
-  --text: #111827;
-  --text-muted: #6B7280;
-  --text-faint: #9CA3AF;
-  --row-hover: rgba(0, 0, 0, 0.03);
+[data-theme="dark"] {
+  /* Ink-derived dark (designer skill warns off the default blue dark; this is a
+     minimal ink+lime dark tuned to Palda tokens) */
+  --bg: #14171A;
+  --sidebar: #101215;
+  --card: #1A1D20;
+  --border: #24272B;
+  --accent: #C4F542;
+  --accent-dim: rgba(196, 245, 66, 0.18);
+  --accent-soft: #2A3315;
+  --accent-mist: #1F2412;
+  --ink: #E7E7E2;
+  --text: #E7E7E2;
+  --text-muted: #8E948A;
+  --text-faint: #4B5148;
+  --row-hover: rgba(255, 255, 255, 0.03);
 }
 
 *,
@@ -54,12 +66,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 a {
-  color: var(--accent);
+  color: var(--ink);
   text-decoration: none;
+  border-bottom: 1px solid var(--accent);
 }
 
 a:hover {
-  text-decoration: underline;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom-color: var(--ink);
 }
 
 input, select, textarea {
@@ -71,6 +86,11 @@ button {
   font-family: 'DM Mono', monospace;
   font-size: 13px;
   cursor: pointer;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ink);
 }
 
 /* Scrollbar */
@@ -99,7 +119,7 @@ button {
   gap: 8px;
   padding: 10px 20px;
   background: var(--accent);
-  color: #000;
+  color: var(--ink);
   border: 1px solid var(--accent);
   border-radius: 0;
   font-family: 'DM Mono', monospace;
@@ -108,11 +128,10 @@ button {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: filter 0.15s;
 }
 .btn-primary:hover {
-  background: #d97706;
-  border-color: #d97706;
+  filter: brightness(1.05);
 }
 .btn-primary:disabled {
   opacity: 0.5;
@@ -126,8 +145,8 @@ button {
   gap: 8px;
   padding: 10px 20px;
   background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
+  color: var(--ink);
+  border: 1px solid var(--border);
   border-radius: 0;
   font-family: 'DM Mono', monospace;
   font-size: 12px;
@@ -135,10 +154,11 @@ button {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 .btn-outline:hover {
-  background: var(--accent-dim);
+  background: var(--accent-mist);
+  border-color: var(--ink);
 }
 .btn-outline:disabled {
   opacity: 0.5;
@@ -161,7 +181,7 @@ button {
 
 .input-field {
   width: 100%;
-  background: var(--bg);
+  background: var(--card);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 10px 12px;
@@ -221,9 +241,9 @@ tr:hover td {
   text-transform: uppercase;
   border: 1px solid;
 }
-.badge-danger { color: var(--danger); border-color: var(--danger); background: rgba(239,68,68,0.1); }
-.badge-warning { color: var(--warning); border-color: var(--warning); background: rgba(249,115,22,0.1); }
-.badge-amber { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+.badge-danger { color: var(--danger); border-color: var(--danger); background: rgba(216, 74, 59, 0.1); }
+.badge-warning { color: var(--warning); border-color: var(--warning); background: rgba(196, 138, 0, 0.1); }
+.badge-amber { color: var(--ink); border-color: var(--accent); background: var(--accent-soft); }
 .badge-muted { color: var(--text-muted); border-color: var(--border); background: transparent; }
 
 .section-header {

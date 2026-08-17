@@ -29,8 +29,8 @@ export default function SignupPage() {
       return;
     }
 
-    sessionStorage.setItem('shelf_pending_email', email);
-    sessionStorage.setItem('shelf_pending_password', password);
+    sessionStorage.setItem('palda_pending_email', email);
+    sessionStorage.setItem('palda_pending_password', password);
     router.push('/onboarding');
   }
 
@@ -57,7 +57,7 @@ export default function SignupPage() {
               letterSpacing: '-0.04em',
             }}
           >
-            SHELF
+            PALDA
           </span>
           <div
             style={{

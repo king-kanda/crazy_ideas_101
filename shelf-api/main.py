@@ -21,8 +21,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Shelf — Buyer Intelligence API",
-    description="Backend API for the Shelf buyer intelligence SaaS platform.",
+    title="Palda Commerce API",
+    description="Backend API for Palda Commerce — the always-on layer between merchants' ads, inbox, and checkout.",
     version="1.0.0",
     lifespan=lifespan,
 )

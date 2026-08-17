@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from celery import Celery
 
-celery = Celery('shelf', broker=os.environ.get('REDIS_URL', 'redis://localhost:6379'))
+celery = Celery('palda', broker=os.environ.get('REDIS_URL', 'redis://localhost:6379'))
 
 celery.conf.beat_schedule = {
     'fetch-trends-all-stores': {
