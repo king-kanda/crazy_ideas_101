@@ -3,12 +3,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from database import init_db
+from auth import limiter
 from routers.auth import router as auth_router
+from routers.workspace import router as workspace_router
 from routers.ingest import router as ingest_router
 from routers.insights import router as insights_router
 from routers.labs import router as labs_router
@@ -27,6 +31,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,6 +43,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+app.include_router(workspace_router, prefix="/workspace", tags=["Workspace"])
 app.include_router(ingest_router, prefix="/ingest", tags=["Ingest"])
 app.include_router(insights_router, prefix="/insights", tags=["Insights"])
 app.include_router(labs_router, prefix="/labs", tags=["Labs"])

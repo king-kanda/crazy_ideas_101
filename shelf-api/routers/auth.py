@@ -1,34 +1,73 @@
 import uuid
-from fastapi import APIRouter, HTTPException, status, Depends
+import logging
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException, Request, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from database import get_db
-from models import Store
+from models import Store, Merchant, Workspace, Session as AuthSession
 from schemas import (
     SignupRequest, LoginRequest, SignupResponse, VerifyResponse,
     RegenerateKeyResponse, StoreProfileResponse, UpdateProfileRequest,
+    LogoutResponse, ResetPasswordRequest, ResetPasswordResponse,
+    ResetPasswordConfirmRequest, ResetPasswordConfirmResponse,
+    WorkspaceMeResponse,
 )
-from auth import hash_password, verify_password, create_jwt, get_store_from_api_key, get_store_from_jwt
+from auth import (
+    hash_password, verify_password, create_jwt, decode_jwt,
+    get_store_from_api_key, get_store_from_jwt,
+    get_merchant_from_jwt, get_workspace_from_jwt,
+    new_opaque_token, reset_token_expiry, limiter,
+)
 
+log = logging.getLogger("palda.auth")
 router = APIRouter()
 
 
+# ── Signup / Login ────────────────────────────────────────────────
+
 @router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
-async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
-    existing = await db.execute(
-        select(Store).where(Store.owner_email == body.email)
-    )
-    if existing.scalars().first():
+@limiter.limit("5/minute")
+async def signup(request: Request, body: SignupRequest, db: AsyncSession = Depends(get_db)):
+    # Reject duplicates by merchant email (the canonical uniqueness key going forward)
+    # and by legacy stores.owner_email to catch pre-migration accounts.
+    existing_merchant = await db.execute(select(Merchant).where(Merchant.email == body.email))
+    if existing_merchant.scalars().first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists",
+        )
+    existing_store = await db.execute(select(Store).where(Store.owner_email == body.email))
+    if existing_store.scalars().first():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with this email already exists",
         )
 
+    pw_hash = hash_password(body.password)
+
+    merchant = Merchant(
+        id=uuid.uuid4(),
+        business_name=body.store_name,
+        email=body.email,
+        password_hash=pw_hash,
+        status="active",
+    )
+    db.add(merchant)
+    await db.flush()
+
+    workspace = Workspace(id=uuid.uuid4(), merchant_id=merchant.id)
+    db.add(workspace)
+    await db.flush()
+
     new_api_key = str(uuid.uuid4())
     store = Store(
+        id=uuid.uuid4(),
+        workspace_id=workspace.id,
         owner_email=body.email,
-        owner_password_hash=hash_password(body.password),
+        owner_password_hash=pw_hash,
         store_name=body.store_name,
         store_url=body.store_url,
         niche=body.niche,
@@ -38,24 +77,194 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     )
     db.add(store)
     await db.commit()
-    await db.refresh(store)
 
-    token = create_jwt(str(store.id), store.owner_email)
-    return SignupResponse(token=token, api_key=new_api_key, store_id=str(store.id))
+    token = create_jwt(
+        merchant_id=str(merchant.id),
+        workspace_id=str(workspace.id),
+        email=merchant.email,
+        store_id=str(store.id),
+    )
+    return SignupResponse(
+        token=token,
+        api_key=new_api_key,
+        store_id=str(store.id),
+        workspace_id=str(workspace.id),
+        merchant_id=str(merchant.id),
+    )
 
 
 @router.post("/login", response_model=SignupResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Store).where(Store.owner_email == body.email))
-    store = result.scalars().first()
-    if not store or not verify_password(body.password, store.owner_password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
-    token = create_jwt(str(store.id), store.owner_email)
-    return SignupResponse(token=token, api_key=store.api_key, store_id=str(store.id))
+@limiter.limit("10/minute")
+async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
+    # Preferred path: merchants table.
+    merchant_row = (
+        await db.execute(select(Merchant).where(Merchant.email == body.email))
+    ).scalars().first()
 
+    if merchant_row and verify_password(body.password, merchant_row.password_hash):
+        workspace = (
+            await db.execute(select(Workspace).where(Workspace.merchant_id == merchant_row.id))
+        ).scalars().first()
+        if not workspace:
+            # Backfill was expected to create one; guard anyway so we never return a token
+            # without a workspace_id claim.
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Workspace missing for merchant — contact support",
+            )
+        store = (
+            await db.execute(select(Store).where(Store.workspace_id == workspace.id))
+        ).scalars().first()
+        token = create_jwt(
+            merchant_id=str(merchant_row.id),
+            workspace_id=str(workspace.id),
+            email=merchant_row.email,
+            store_id=str(store.id) if store else None,
+        )
+        return SignupResponse(
+            token=token,
+            api_key=store.api_key if store else "",
+            store_id=str(store.id) if store else "",
+            workspace_id=str(workspace.id),
+            merchant_id=str(merchant_row.id),
+        )
+
+    # Legacy fallback: authenticate against stores.owner_email (rows that missed backfill
+    # somehow, or edge-case pre-migration accounts). If it works, mint a JWT that
+    # matches whatever workspace_id has been linked.
+    store = (
+        await db.execute(select(Store).where(Store.owner_email == body.email))
+    ).scalars().first()
+    if store and verify_password(body.password, store.owner_password_hash):
+        workspace_id = store.workspace_id
+        if not workspace_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Store has no workspace — backfill did not run",
+            )
+        merchant = (
+            await db.execute(select(Merchant).where(Merchant.email == body.email))
+        ).scalars().first()
+        merchant_id = str(merchant.id) if merchant else str(workspace_id)
+        token = create_jwt(
+            merchant_id=merchant_id,
+            workspace_id=str(workspace_id),
+            email=body.email,
+            store_id=str(store.id),
+        )
+        return SignupResponse(
+            token=token,
+            api_key=store.api_key,
+            store_id=str(store.id),
+            workspace_id=str(workspace_id),
+            merchant_id=merchant_id,
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid email or password",
+    )
+
+
+@router.post("/logout", response_model=LogoutResponse)
+async def logout(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    merchant: Merchant = Depends(get_merchant_from_jwt),
+):
+    # Stateless JWT — record a logout marker session so we have an audit trail
+    # even before we move to server-side session validation.
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header[7:] if auth_header.startswith("Bearer ") else ""
+    if token:
+        db.add(AuthSession(
+            id=uuid.uuid4(),
+            merchant_id=merchant.id,
+            token=token[:255],
+            kind="logout",
+            expires_at=datetime.utcnow(),
+            revoked_at=datetime.utcnow(),
+        ))
+        await db.commit()
+    return LogoutResponse(logged_out=True)
+
+
+# ── Password reset ───────────────────────────────────────────────
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+@limiter.limit("5/minute")
+async def reset_password_request(
+    request: Request,
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    # Always return 200 to avoid user enumeration. Only mint a token if the
+    # merchant exists. Email delivery is deferred (PRD: no user-facing email in MVP);
+    # the token is echoed in the response as `dev_token` for now so the flow is
+    # exercisable end-to-end.
+    merchant = (
+        await db.execute(select(Merchant).where(Merchant.email == body.email))
+    ).scalars().first()
+
+    if not merchant:
+        log.info("reset_password: no merchant for %s", body.email)
+        return ResetPasswordResponse(accepted=True, dev_token=None)
+
+    token = new_opaque_token()
+    db.add(AuthSession(
+        id=uuid.uuid4(),
+        merchant_id=merchant.id,
+        token=token,
+        kind="reset",
+        expires_at=reset_token_expiry(),
+    ))
+    await db.commit()
+    log.info("reset_password: minted reset token for merchant %s", merchant.id)
+    return ResetPasswordResponse(accepted=True, dev_token=token)
+
+
+@router.post("/reset-password/confirm", response_model=ResetPasswordConfirmResponse)
+@limiter.limit("10/minute")
+async def reset_password_confirm(
+    request: Request,
+    body: ResetPasswordConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    session_row = (
+        await db.execute(select(AuthSession).where(
+            AuthSession.token == body.token,
+            AuthSession.kind == "reset",
+        ))
+    ).scalars().first()
+
+    if not session_row or session_row.revoked_at is not None or session_row.expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token is invalid or expired",
+        )
+
+    merchant = (
+        await db.execute(select(Merchant).where(Merchant.id == session_row.merchant_id))
+    ).scalars().first()
+    if not merchant:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Merchant not found")
+
+    new_hash = hash_password(body.new_password)
+    merchant.password_hash = new_hash
+    # Keep legacy stores.owner_password_hash in sync so plugin-only auth paths
+    # don't fall out of parity while we still have both fields.
+    store = (
+        await db.execute(select(Store).where(Store.owner_email == merchant.email))
+    ).scalars().first()
+    if store:
+        store.owner_password_hash = new_hash
+
+    session_row.revoked_at = datetime.utcnow()
+    await db.commit()
+    return ResetPasswordConfirmResponse(reset=True)
+
+
+# ── Legacy: kept unchanged for plugin + existing dashboards ──────
 
 @router.post("/regenerate-key", response_model=RegenerateKeyResponse)
 async def regenerate_key(

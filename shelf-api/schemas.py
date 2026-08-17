@@ -25,6 +25,44 @@ class SignupResponse(BaseModel):
     token: str
     api_key: str
     store_id: str
+    workspace_id: str
+    merchant_id: str
+
+
+class LogoutResponse(BaseModel):
+    logged_out: bool
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordResponse(BaseModel):
+    accepted: bool
+    # dev-only echo of the reset token so we can exercise the flow before
+    # transactional email is wired up (see PRD §MVP: no user-facing email yet).
+    dev_token: Optional[str] = None
+
+
+class ResetPasswordConfirmRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class ResetPasswordConfirmResponse(BaseModel):
+    reset: bool
+
+
+class WorkspaceMeResponse(BaseModel):
+    merchant_id: str
+    workspace_id: str
+    business_name: str
+    email: str
+    timezone: str
+    currency: str
+    has_store: bool
+    store_id: Optional[str] = None
+    store_name: Optional[str] = None
 
 
 class VerifyResponse(BaseModel):
