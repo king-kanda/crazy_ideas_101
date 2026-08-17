@@ -20,12 +20,12 @@ Palette (from `shelf-app/.claude/designer/SKILL.md`, mirrored in `CLAUDE.md`): b
 - [x] Rename sidebar group "Insights" → "Business Intelligence" so Demand / Store Health / Activity live under the BI umbrella that Overview now anchors.
 
 ## Phase 1 — AUTH
-- [ ] New tables: `merchants`, `workspaces`, `sessions` (current `Store` conflates all three).
-- [ ] Endpoints: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `POST /auth/reset-password`, `POST /auth/reset-password/confirm`, `GET /workspace/me`.
-- [ ] JWT session issuance + argon2/bcrypt hashing.
-- [ ] Rate-limit signup/login (TDD.md:74).
-- [ ] Password reset email delivery (transactional).
-- [ ] Frontend: rework `(auth)/login`, `(auth)/signup`, add reset-password pages, empty workspace dashboard shell.
+- [x] **Step 1 — Schema + backfill (additive):** new tables `merchants`, `workspaces`, `sessions`; `workspace_id` FK on `stores`; idempotent backfill in `init_db()` materializes a Merchant + Workspace for every legacy Store row. Zero behavior change; plugin + existing dashboards untouched.
+  - *Why additive first:* touching auth surface + tenancy in one commit is a rollback nightmare. Landing the schema and backfill under a boot-time migration lets Steps 2/3 rewire endpoints and the frontend against a schema that's already populated in prod.
+- [ ] **Step 2 — New auth surface:** rewire `POST /auth/signup`, `POST /auth/login` to create/use Merchant + Workspace + Session; JWT carries `workspace_id`. Add `POST /auth/logout`, `POST /auth/reset-password`, `POST /auth/reset-password/confirm` (token stored on Session, email delivery deferred per PRD "no email in MVP"), `GET /workspace/me`. Rate-limit via slowapi. Add `get_workspace_from_jwt` helper.
+- [ ] **Step 3 — Frontend rewiring:** AuthContext carries `workspaceId`; reset-password pages; empty-workspace state on `/dashboard` when merchant has no Store yet.
+- [ ] Argon2 hashing (currently bcrypt — TDD allows either; upgrade later).
+- [ ] Password reset email delivery (transactional — deferred per PRD "no email in MVP"; token surfaced in dev logs for now).
 
 ## Phase 2 — ES Login (Meta Embedded Signup)
 - [ ] Tables: `meta_connections`, `webhook_subscriptions` (TDD.md:80-84).

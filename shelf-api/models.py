@@ -9,10 +9,49 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 
+class Merchant(Base):
+    __tablename__ = "merchants"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    business_name = Column(Text, nullable=False)
+    email = Column(Text, unique=True, nullable=False, index=True)
+    password_hash = Column(Text, nullable=False)
+    status = Column(Text, default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    workspaces = relationship("Workspace", back_populates="merchant", cascade="all, delete-orphan")
+
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    merchant_id = Column(UUID(as_uuid=True), ForeignKey("merchants.id", ondelete="CASCADE"), nullable=False, index=True)
+    timezone = Column(Text, default="Africa/Nairobi")
+    currency = Column(Text, default="KES")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    merchant = relationship("Merchant", back_populates="workspaces")
+    stores = relationship("Store", back_populates="workspace")
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    merchant_id = Column(UUID(as_uuid=True), ForeignKey("merchants.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(Text, unique=True, nullable=False, index=True)
+    kind = Column(Text, default="auth")  # "auth" | "reset"
+    expires_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Store(Base):
     __tablename__ = "stores"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     owner_email = Column(Text, nullable=False)
     owner_password_hash = Column(Text, nullable=False)
     store_name = Column(Text, nullable=False)
@@ -25,6 +64,8 @@ class Store(Base):
     plugin_site_url = Column(Text, nullable=True)
     demo_loaded = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    workspace = relationship("Workspace", back_populates="stores")
 
     products = relationship("Product", back_populates="store", cascade="all, delete-orphan")
     search_events = relationship("SearchEvent", back_populates="store", cascade="all, delete-orphan")
