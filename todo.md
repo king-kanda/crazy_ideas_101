@@ -13,6 +13,11 @@ Palette (from `shelf-app/.claude/designer/SKILL.md`, mirrored in `CLAUDE.md`): b
 - [x] Add app-level encryption helper for tokens/secrets (used by Meta + WooCommerce credentials).
 - [x] Structured logging + `sync_jobs` visibility surface (TDD §4).
 - [x] Adopt Palda design-system colors in `CLAUDE.md` (off-white / lime / ink) — sourced from `shelf-app/.claude/designer/SKILL.md`.
+- [x] Adopt Tailwind v4 + shadcn/ui (`new-york` style, `radix` base, `lucide` icons) with Palda tokens wired into `@theme inline`. Legacy `.card` / `.stat-value` classes kept only until each page migrates.
+- [x] Shell: shadcn `Sidebar` (`collapsible="icon"`), grouped nav pre-staging every phase (Workspace / Storefront / Business Intelligence / Integrations / Settings), avatar dropdown footer, sticky header with `SidebarTrigger` + page title + last-sync + `ThemeToggle`.
+- [x] Overview → real BI dashboard (`app/dashboard/page.tsx`) built on shadcn `Card`/`Badge`/`Chart`/`Skeleton`. Surfaces storefront, messaging, demand, ads-attribution, KB, cart recovery, and integrations health in one view. Phase 2/4/5 panels honestly render "Not connected / Deferred / Phase N" instead of fabricating numbers — enforces PRD §3 (no capability we can't back).
+  - *Why:* PRD calls out blind ad spend, silent cart abandonment, and no memory as the core problems. The Overview needs to be the single place a merchant sees whether Palda is measuring each of those — even before the underlying phase ships — so status is legible from day one.
+- [x] Rename sidebar group "Insights" → "Business Intelligence" so Demand / Store Health / Activity live under the BI umbrella that Overview now anchors.
 
 ## Phase 1 — AUTH
 - [ ] New tables: `merchants`, `workspaces`, `sessions` (current `Store` conflates all three).
