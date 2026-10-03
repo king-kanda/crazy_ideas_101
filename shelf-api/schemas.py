@@ -21,6 +21,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class OAuthRequest(BaseModel):
+    provider: str  # "google"
+    email: EmailStr
+    name: Optional[str] = None
+    provider_account_id: str
+
+
 class SignupResponse(BaseModel):
     token: str
     api_key: str
@@ -51,6 +58,21 @@ class ResetPasswordConfirmRequest(BaseModel):
 
 class ResetPasswordConfirmResponse(BaseModel):
     reset: bool
+
+
+class CreateStoreRequest(BaseModel):
+    store_name: str
+    store_url: str
+    niche: Optional[str] = None
+    location_country: Optional[str] = None
+    location_city: Optional[str] = None
+
+
+class CreateStoreResponse(BaseModel):
+    store_id: str
+    api_key: str
+    store_name: str
+    store_url: str
 
 
 class WorkspaceMeResponse(BaseModel):

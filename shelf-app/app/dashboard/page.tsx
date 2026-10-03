@@ -20,6 +20,8 @@ import {
   type StoreResponse,
   type ActivityResponse,
 } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Store as StoreIcon } from 'lucide-react';
 
 import {
   Card,
@@ -92,6 +94,7 @@ export default function OverviewPage() {
   const [store, setStore] = useState<StoreResponse | null>(null);
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasStore, setHasStore] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -102,15 +105,46 @@ export default function OverviewPage() {
     if (!auth) return;
     if (auth.storeName) setStoreName(auth.storeName);
 
-    Promise.allSettled([
-      api.demand(auth.storeId, auth.apiKey),
-      api.store(auth.storeId, auth.apiKey),
-      api.activity(auth.storeId, auth.apiKey, 'week'),
-    ]).then(([d, s, a]) => {
-      if (d.status === 'fulfilled') setDemand(d.value);
-      if (s.status === 'fulfilled') setStore(s.value);
-      if (a.status === 'fulfilled') setActivity(a.value);
-      setLoading(false);
+    // Authoritative "does this merchant have a store yet" check. Google/OAuth
+    // signups reach the dashboard with a workspace but no store — render the
+    // empty-workspace state instead of firing insights calls that would 401.
+    api.workspaceMe(auth.token).then((me) => {
+      if (me.storeName) setStoreName(me.storeName);
+      if (!me.hasStore || !auth.apiKey || !me.storeId) {
+        setHasStore(false);
+        setLoading(false);
+        return;
+      }
+      setHasStore(true);
+      const storeId = me.storeId;
+      Promise.allSettled([
+        api.demand(storeId, auth.apiKey),
+        api.store(storeId, auth.apiKey),
+        api.activity(storeId, auth.apiKey, 'week'),
+      ]).then(([d, s, a]) => {
+        if (d.status === 'fulfilled') setDemand(d.value);
+        if (s.status === 'fulfilled') setStore(s.value);
+        if (a.status === 'fulfilled') setActivity(a.value);
+        setLoading(false);
+      });
+    }).catch(() => {
+      // If /workspace/me is unreachable, fall back to stored store creds if present.
+      if (auth.hasStore) {
+        setHasStore(true);
+        Promise.allSettled([
+          api.demand(auth.storeId, auth.apiKey),
+          api.store(auth.storeId, auth.apiKey),
+          api.activity(auth.storeId, auth.apiKey, 'week'),
+        ]).then(([d, s, a]) => {
+          if (d.status === 'fulfilled') setDemand(d.value);
+          if (s.status === 'fulfilled') setStore(s.value);
+          if (a.status === 'fulfilled') setActivity(a.value);
+          setLoading(false);
+        });
+      } else {
+        setHasStore(false);
+        setLoading(false);
+      }
     });
   }, [router]);
 
@@ -142,6 +176,10 @@ export default function OverviewPage() {
     date: d.date.slice(5),
     activeUsers: d.activeUsers,
   }));
+
+  if (hasStore === false) {
+    return <EmptyWorkspace storeName={storeName} onConnect={() => router.push('/onboarding')} />;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -509,6 +547,38 @@ function EmptyState({ label }: { label: string }) {
   return (
     <div className="flex h-[220px] items-center justify-center text-xs text-muted-foreground">
       {label}
+    </div>
+  );
+}
+
+function EmptyWorkspace({
+  storeName,
+  onConnect,
+}: {
+  storeName: string;
+  onConnect: () => void;
+}) {
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
+      <div className="flex size-14 items-center justify-center rounded-full border bg-lime-mist">
+        <StoreIcon className="size-6 text-ink" />
+      </div>
+      <div className="max-w-md">
+        <h1
+          className="text-2xl font-bold tracking-tight"
+          style={{ fontFamily: 'Syne, sans-serif' }}
+        >
+          {storeName ? `Welcome, ${storeName}` : 'Welcome to Palda'}
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Your workspace is ready, but no store is connected yet. Connect your WooCommerce
+          store to start seeing demand, cart, and activity intelligence here.
+        </p>
+      </div>
+      <Button onClick={onConnect}>Connect your store</Button>
+      <p className="text-[11px] text-muted-foreground">
+        You’ll get an API key and plugin setup steps in the next screen.
+      </p>
     </div>
   );
 }

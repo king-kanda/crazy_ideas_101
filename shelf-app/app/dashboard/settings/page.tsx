@@ -77,7 +77,15 @@ function ApiKeyTab({ apiKey, token }: { apiKey: string; token: string }) {
     try {
       const { apiKey: newKey } = await api.regenerateKey(token);
       const auth = getAuth()!;
-      saveAuth(auth.token, newKey, auth.storeId, auth.storeName, auth.storeUrl);
+      saveAuth({
+        token: auth.token,
+        workspaceId: auth.workspaceId,
+        merchantId: auth.merchantId,
+        apiKey: newKey,
+        storeId: auth.storeId,
+        storeName: auth.storeName,
+        storeUrl: auth.storeUrl,
+      });
       setKey(newKey);
       setRevealed(true);
     } catch (err: unknown) {
@@ -323,7 +331,15 @@ function StoreTab({ token }: { token: string }) {
       const updated = await api.updateProfile(token, form);
       setProfile(updated);
       const auth = getAuth()!;
-      saveAuth(auth.token, auth.apiKey, auth.storeId, updated.storeName, updated.storeUrl);
+      saveAuth({
+        token: auth.token,
+        workspaceId: auth.workspaceId,
+        merchantId: auth.merchantId,
+        apiKey: auth.apiKey,
+        storeId: auth.storeId,
+        storeName: updated.storeName,
+        storeUrl: updated.storeUrl,
+      });
       setSaved(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save changes.');

@@ -43,6 +43,9 @@ async def init_db():
             "ALTER TABLE search_events ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE",
             "ALTER TABLE cart_events ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE",
             "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT FALSE",
+            # OAuth: merchants created via Google sign-in have no local password.
+            "ALTER TABLE merchants ALTER COLUMN password_hash DROP NOT NULL",
+            "ALTER TABLE stores ALTER COLUMN owner_password_hash DROP NOT NULL",
         ]
         for sql in migrations:
             await conn.execute(text(sql))

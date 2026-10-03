@@ -7,13 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from database import get_db
-from models import Store, Merchant, Workspace, Session as AuthSession
+from models import Store, Merchant, Workspace, Session as AuthSession, OAuthAccount
 from schemas import (
     SignupRequest, LoginRequest, SignupResponse, VerifyResponse,
     RegenerateKeyResponse, StoreProfileResponse, UpdateProfileRequest,
     LogoutResponse, ResetPasswordRequest, ResetPasswordResponse,
     ResetPasswordConfirmRequest, ResetPasswordConfirmResponse,
-    WorkspaceMeResponse,
+    WorkspaceMeResponse, OAuthRequest,
 )
 from auth import (
     hash_password, verify_password, create_jwt, decode_jwt,
@@ -101,7 +101,7 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
         await db.execute(select(Merchant).where(Merchant.email == body.email))
     ).scalars().first()
 
-    if merchant_row and verify_password(body.password, merchant_row.password_hash):
+    if merchant_row and merchant_row.password_hash and verify_password(body.password, merchant_row.password_hash):
         workspace = (
             await db.execute(select(Workspace).where(Workspace.merchant_id == merchant_row.id))
         ).scalars().first()
@@ -135,7 +135,7 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     store = (
         await db.execute(select(Store).where(Store.owner_email == body.email))
     ).scalars().first()
-    if store and verify_password(body.password, store.owner_password_hash):
+    if store and store.owner_password_hash and verify_password(body.password, store.owner_password_hash):
         workspace_id = store.workspace_id
         if not workspace_id:
             raise HTTPException(
@@ -163,6 +163,99 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid email or password",
+    )
+
+
+@router.post("/oauth", response_model=SignupResponse)
+@limiter.limit("10/minute")
+async def oauth(request: Request, body: OAuthRequest, db: AsyncSession = Depends(get_db)):
+    """Find-or-create a merchant from a verified OAuth identity (Google, MVP).
+
+    The frontend NextAuth flow calls this after a successful Google sign-in.
+    Email is the canonical key: an existing password merchant with the same email
+    gets an `oauth_accounts` row attached (account linking) rather than an error.
+    OAuth-only merchants are created with no `password_hash`. No Store is created
+    here — Google signups land in onboarding to connect their store, and the
+    frontend keys off an empty `store_id` to route there.
+    """
+    if body.provider != "google":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported OAuth provider",
+        )
+
+    # 1. Existing link by (provider, provider_account_id) — the fast path for returns.
+    link = (
+        await db.execute(
+            select(OAuthAccount).where(
+                OAuthAccount.provider == body.provider,
+                OAuthAccount.provider_account_id == body.provider_account_id,
+            )
+        )
+    ).scalars().first()
+
+    merchant: Merchant | None = None
+    if link:
+        merchant = (
+            await db.execute(select(Merchant).where(Merchant.id == link.merchant_id))
+        ).scalars().first()
+
+    # 2. No link yet — resolve by email (links an existing password account).
+    if merchant is None:
+        merchant = (
+            await db.execute(select(Merchant).where(Merchant.email == body.email))
+        ).scalars().first()
+
+        if merchant is None:
+            # Brand-new OAuth merchant: create Merchant + Workspace, no password, no store.
+            merchant = Merchant(
+                id=uuid.uuid4(),
+                business_name=body.name or body.email.split("@")[0],
+                email=body.email,
+                password_hash=None,
+                status="active",
+            )
+            db.add(merchant)
+            await db.flush()
+            db.add(Workspace(id=uuid.uuid4(), merchant_id=merchant.id))
+            await db.flush()
+
+        # Attach the OAuth identity (covers both freshly-created and linked accounts).
+        db.add(OAuthAccount(
+            id=uuid.uuid4(),
+            merchant_id=merchant.id,
+            provider=body.provider,
+            provider_account_id=body.provider_account_id,
+        ))
+        await db.flush()
+
+    # Resolve workspace (backfill guarantees one for legacy accounts; new ones just made it).
+    workspace = (
+        await db.execute(select(Workspace).where(Workspace.merchant_id == merchant.id))
+    ).scalars().first()
+    if not workspace:
+        workspace = Workspace(id=uuid.uuid4(), merchant_id=merchant.id)
+        db.add(workspace)
+        await db.flush()
+
+    store = (
+        await db.execute(select(Store).where(Store.workspace_id == workspace.id))
+    ).scalars().first()
+
+    await db.commit()
+
+    token = create_jwt(
+        merchant_id=str(merchant.id),
+        workspace_id=str(workspace.id),
+        email=merchant.email,
+        store_id=str(store.id) if store else None,
+    )
+    return SignupResponse(
+        token=token,
+        api_key=store.api_key if store else "",
+        store_id=str(store.id) if store else "",
+        workspace_id=str(workspace.id),
+        merchant_id=str(merchant.id),
     )
 
 

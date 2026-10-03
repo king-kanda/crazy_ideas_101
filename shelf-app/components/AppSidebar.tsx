@@ -39,15 +39,13 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { signOut } from 'next-auth/react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { clearAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth-context';
 
 type NavChild = { label: string; href: string; soon?: boolean };
 type NavItem = {
@@ -146,10 +144,13 @@ function ComingBadge() {
 export function AppSidebar({ email, storeName }: { email: string; storeName: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { logout } = useAuth();
   const initial = email ? email[0].toUpperCase() : 'P';
 
-  function handleLogout() {
-    clearAuth();
+  async function handleLogout() {
+    logout();
+    // Also drop any NextAuth (Google) session so we don't silently re-auth.
+    await signOut({ redirect: false }).catch(() => {});
     router.replace('/login');
   }
 
@@ -230,11 +231,11 @@ export function AppSidebar({ email, storeName }: { email: string; storeName: str
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t bg-card">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          <Collapsible className="group/account">
+            <SidebarMenuItem>
+              <CollapsibleTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent"
@@ -250,47 +251,51 @@ export function AppSidebar({ email, storeName }: { email: string; storeName: str
                       {storeName || 'Workspace'}
                     </span>
                   </div>
-                  <ChevronsUpDown className="ml-auto size-4 opacity-60" />
+                  <ChevronsUpDown className="ml-auto size-4 opacity-60 transition-transform group-data-[state=open]/account:rotate-180" />
                 </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="end"
-                sideOffset={8}
-                className="w-56"
-              >
-                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Account
-                </DropdownMenuLabel>
-                <DropdownMenuItem asChild>
+              </CollapsibleTrigger>
+            </SidebarMenuItem>
+            <CollapsibleContent>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/dashboard/settings'}>
                   <Link href="/dashboard/settings">
                     <Building2 />
-                    Business settings
+                    <span>Business settings</span>
                   </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton disabled>
                   <Bot />
-                  Agent settings
+                  <span>Agent settings</span>
                   <ComingBadge />
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton disabled>
                   <Undo2 />
-                  Cart recovery
+                  <span>Cart recovery</span>
                   <ComingBadge />
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton disabled>
                   <Users />
-                  Team
+                  <span>Team</span>
                   <ComingBadge />
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleLogout}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive"
+                >
                   <LogOut />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
+                  <span>Log out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </CollapsibleContent>
+          </Collapsible>
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from sqlalchemy import (
     Column, String, Text, Integer, Boolean, Numeric,
-    ForeignKey, DateTime, JSON
+    ForeignKey, DateTime, JSON, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -15,11 +15,29 @@ class Merchant(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     business_name = Column(Text, nullable=False)
     email = Column(Text, unique=True, nullable=False, index=True)
-    password_hash = Column(Text, nullable=False)
+    # Nullable: OAuth-only merchants (e.g. Google sign-in) have no local password.
+    password_hash = Column(Text, nullable=True)
     status = Column(Text, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     workspaces = relationship("Workspace", back_populates="merchant", cascade="all, delete-orphan")
+    oauth_accounts = relationship("OAuthAccount", back_populates="merchant", cascade="all, delete-orphan")
+
+
+class OAuthAccount(Base):
+    __tablename__ = "oauth_accounts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    merchant_id = Column(UUID(as_uuid=True), ForeignKey("merchants.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider = Column(Text, nullable=False)  # "google"
+    provider_account_id = Column(Text, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    merchant = relationship("Merchant", back_populates="oauth_accounts")
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_account_id", name="uq_oauth_provider_account"),
+    )
 
 
 class Workspace(Base):
@@ -53,7 +71,8 @@ class Store(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     owner_email = Column(Text, nullable=False)
-    owner_password_hash = Column(Text, nullable=False)
+    # Nullable: stores created under an OAuth-only merchant have no local password.
+    owner_password_hash = Column(Text, nullable=True)
     store_name = Column(Text, nullable=False)
     store_url = Column(Text, nullable=False)
     platform = Column(Text, default="woocommerce")

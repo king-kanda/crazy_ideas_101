@@ -92,28 +92,61 @@ function Step1({ onNext }: { onNext: () => void }) {
     e.preventDefault();
     setError('');
 
+    // Two entry paths:
+    //  • Already authenticated with no store (e.g. Google/OAuth signup) → create a
+    //    store for the existing workspace.
+    //  • Pending password signup (creds stashed on the signup page) → full signup
+    //    that creates merchant + workspace + store in one shot.
+    const existing = getAuth();
     const email = sessionStorage.getItem('palda_pending_email');
     const password = sessionStorage.getItem('palda_pending_password');
 
-    if (!email || !password) {
+    if (!existing && (!email || !password)) {
       setError('Session expired. Please go back and sign up again.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await api.signup({
-        email,
-        password,
-        store_name: form.storeName,
-        store_url: form.storeUrl,
-        niche: form.niche || undefined,
-        location_country: form.country || undefined,
-        location_city: form.city || undefined,
-      });
-      saveAuth(res.token, res.apiKey, res.storeId, form.storeName, form.storeUrl);
-      sessionStorage.removeItem('palda_pending_email');
-      sessionStorage.removeItem('palda_pending_password');
+      if (existing) {
+        const store = await api.createStore(existing.token, {
+          storeName: form.storeName,
+          storeUrl: form.storeUrl,
+          niche: form.niche || undefined,
+          locationCountry: form.country || undefined,
+          locationCity: form.city || undefined,
+        });
+        saveAuth({
+          token: existing.token,
+          workspaceId: existing.workspaceId,
+          merchantId: existing.merchantId,
+          apiKey: store.apiKey,
+          storeId: store.storeId,
+          storeName: store.storeName,
+          storeUrl: store.storeUrl,
+        });
+      } else {
+        const res = await api.signup({
+          email: email!,
+          password: password!,
+          store_name: form.storeName,
+          store_url: form.storeUrl,
+          niche: form.niche || undefined,
+          location_country: form.country || undefined,
+          location_city: form.city || undefined,
+        });
+        saveAuth({
+          token: res.token,
+          workspaceId: res.workspaceId,
+          merchantId: res.merchantId,
+          apiKey: res.apiKey,
+          storeId: res.storeId,
+          storeName: form.storeName,
+          storeUrl: form.storeUrl,
+        });
+        sessionStorage.removeItem('palda_pending_email');
+        sessionStorage.removeItem('palda_pending_password');
+      }
       onNext();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Could not create account. Please try again.');

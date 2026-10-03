@@ -23,12 +23,28 @@ export interface AuthResponse {
   token: string;
   apiKey: string;
   storeId: string;
+  workspaceId: string;
+  merchantId: string;
 }
 
 interface RawAuthResponse {
   token: string;
   api_key: string;
   store_id: string;
+  workspace_id: string;
+  merchant_id: string;
+}
+
+export interface WorkspaceMe {
+  merchantId: string;
+  workspaceId: string;
+  businessName: string;
+  email: string;
+  timezone: string;
+  currency: string;
+  hasStore: boolean;
+  storeId: string | null;
+  storeName: string | null;
 }
 
 export interface VerifyResponse {
@@ -153,6 +169,16 @@ export async function apiFetch<T>(
   return res.json();
 }
 
+function normalizeAuth(raw: RawAuthResponse): AuthResponse {
+  return {
+    token: raw.token,
+    apiKey: raw.api_key,
+    storeId: raw.store_id,
+    workspaceId: raw.workspace_id,
+    merchantId: raw.merchant_id,
+  };
+}
+
 // ── API surface ────────────────────────────────────────────────
 
 export const api = {
@@ -161,7 +187,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return { token: raw.token, apiKey: raw.api_key, storeId: raw.store_id };
+    return normalizeAuth(raw);
   },
 
   login: async (data: LoginData): Promise<AuthResponse> => {
@@ -169,7 +195,69 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return { token: raw.token, apiKey: raw.api_key, storeId: raw.store_id };
+    return normalizeAuth(raw);
+  },
+
+  // ── Password reset (email delivery deferred — API echoes dev_token for now) ──
+  requestPasswordReset: async (email: string): Promise<{ accepted: boolean; devToken: string | null }> => {
+    const raw = await apiFetch<{ accepted: boolean; dev_token: string | null }>(
+      '/auth/reset-password',
+      { method: 'POST', body: JSON.stringify({ email }) },
+    );
+    return { accepted: raw.accepted, devToken: raw.dev_token };
+  },
+
+  confirmPasswordReset: async (token: string, newPassword: string): Promise<{ reset: boolean }> => {
+    return apiFetch<{ reset: boolean }>('/auth/reset-password/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, new_password: newPassword }),
+    });
+  },
+
+  createStore: async (
+    token: string,
+    data: { storeName: string; storeUrl: string; niche?: string; locationCountry?: string; locationCity?: string },
+  ): Promise<{ storeId: string; apiKey: string; storeName: string; storeUrl: string }> => {
+    const raw = await apiFetch<{ store_id: string; api_key: string; store_name: string; store_url: string }>(
+      '/workspace/store',
+      {
+        method: 'POST',
+        authToken: token,
+        body: JSON.stringify({
+          store_name: data.storeName,
+          store_url: data.storeUrl,
+          niche: data.niche,
+          location_country: data.locationCountry,
+          location_city: data.locationCity,
+        }),
+      },
+    );
+    return { storeId: raw.store_id, apiKey: raw.api_key, storeName: raw.store_name, storeUrl: raw.store_url };
+  },
+
+  workspaceMe: async (token: string): Promise<WorkspaceMe> => {
+    const raw = await apiFetch<{
+      merchant_id: string;
+      workspace_id: string;
+      business_name: string;
+      email: string;
+      timezone: string;
+      currency: string;
+      has_store: boolean;
+      store_id: string | null;
+      store_name: string | null;
+    }>('/workspace/me', { authToken: token });
+    return {
+      merchantId: raw.merchant_id,
+      workspaceId: raw.workspace_id,
+      businessName: raw.business_name,
+      email: raw.email,
+      timezone: raw.timezone,
+      currency: raw.currency,
+      hasStore: raw.has_store,
+      storeId: raw.store_id,
+      storeName: raw.store_name,
+    };
   },
 
   regenerateKey: async (token: string): Promise<{ apiKey: string }> => {

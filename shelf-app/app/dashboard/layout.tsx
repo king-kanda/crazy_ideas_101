@@ -55,10 +55,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (sync) setLastSync(sync);
     setEmail(getEmailFromToken(auth.token));
 
-    api.getProfile(auth.token).then((profile) => {
-      setStoreName(profile.storeName);
-      saveAuth(auth.token, auth.apiKey, auth.storeId, profile.storeName, profile.storeUrl);
-    }).catch(() => {});
+    // getProfile is store-scoped; OAuth merchants with no store yet will 401 here.
+    // That's fine — the header just shows no store name until one is connected.
+    if (auth.hasStore) {
+      api.getProfile(auth.token).then((profile) => {
+        setStoreName(profile.storeName);
+        saveAuth({
+          token: auth.token,
+          workspaceId: auth.workspaceId,
+          merchantId: auth.merchantId,
+          apiKey: auth.apiKey,
+          storeId: auth.storeId,
+          storeName: profile.storeName,
+          storeUrl: profile.storeUrl,
+        });
+      }).catch(() => {});
+    }
   }, [router]);
 
   const title = pageTitleFor(pathname);
