@@ -87,9 +87,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         label: 'Channels',
         icon: Plug,
         children: [
-          { label: 'WhatsApp', href: '/dashboard/integrations/whatsapp', soon: true },
-          { label: 'Instagram', href: '/dashboard/integrations/instagram', soon: true },
-          { label: 'Facebook', href: '/dashboard/integrations/facebook', soon: true },
+          { label: 'Meta (WhatsApp/IG/FB)', href: '/dashboard/integrations/meta' },
           { label: 'WooCommerce', href: '/dashboard/integrations/woocommerce' },
         ],
       },

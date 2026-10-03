@@ -16,6 +16,8 @@ from routers.workspace import router as workspace_router
 from routers.ingest import router as ingest_router
 from routers.insights import router as insights_router
 from routers.labs import router as labs_router
+from routers.integrations_meta import router as integrations_meta_router
+from routers.webhooks import router as webhooks_router
 
 
 @asynccontextmanager
@@ -47,6 +49,8 @@ app.include_router(workspace_router, prefix="/workspace", tags=["Workspace"])
 app.include_router(ingest_router, prefix="/ingest", tags=["Ingest"])
 app.include_router(insights_router, prefix="/insights", tags=["Insights"])
 app.include_router(labs_router, prefix="/labs", tags=["Labs"])
+app.include_router(integrations_meta_router, prefix="/integrations/meta", tags=["Integrations: Meta"])
+app.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
 
 
 @app.get("/health", tags=["Health"])

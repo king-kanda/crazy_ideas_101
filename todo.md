@@ -40,13 +40,13 @@ Palette (from `shelf-app/.claude/designer/SKILL.md`, mirrored in `CLAUDE.md`): b
 - [ ] Password reset email delivery (transactional — deferred per PRD "no email in MVP"; token surfaced in dev logs for now).
 
 ## Phase 2 — ES Login (Meta Embedded Signup)
-- [ ] Tables: `meta_connections`, `webhook_subscriptions` (TDD.md:80-84).
-- [ ] Meta App registration + App Review kickoff (long lead — start now).
-- [ ] Frontend: Embedded Signup JS SDK integration; "Connect WhatsApp / IG / Facebook" flow.
-- [ ] Endpoints: `POST /integrations/meta/es-callback`, `GET /integrations/meta/status`, `DELETE /integrations/meta/{platform}`.
-- [ ] Webhook receivers: `POST /webhooks/whatsapp|instagram|facebook` — signature verify, enqueue to Celery, 200 fast, idempotent.
-- [ ] Celery task `meta_token_health_check` (hourly).
-- [ ] Token encryption at rest; never returned in API responses.
+- [x] Tables: `meta_connections`, `webhook_subscriptions`, `webhook_events` (last for idempotency + raw-payload buffer). Workspace-scoped; unique (workspace_id, platform) on connections; unique (platform, event_id) dedupe on events.
+- [x] Meta App registration + App Review kickoff — user-confirmed done; backend reads `META_APP_ID` / `META_APP_SECRET` / `META_WEBHOOK_VERIFY_TOKEN` / `META_REDIRECT_URI` from env.
+- [x] Frontend: Meta JS SDK bootstrapped on `/dashboard/integrations/meta`; "Connect" buttons use `FB.login({config_id, response_type:'code'})` per-platform; disconnect inline. Sidebar collapsed from three channel entries to one `Meta (WhatsApp/IG/FB)` entry.
+- [x] Endpoints: `POST /integrations/meta/es-callback` (exchanges auth code → long-lived token via Graph `oauth/access_token`, upserts connection), `GET /integrations/meta/status` (never returns the token), `DELETE /integrations/meta/{platform}`.
+- [x] Webhook receivers: `GET /webhooks/{platform}` (Meta hub.challenge verify) + `POST /webhooks/{platform}` with `X-Hub-Signature-256` HMAC verify, per-platform event-id extraction, idempotency via unique constraint, workspace reverse-lookup, enqueue `workers.meta_events.process_webhook_event`.
+- [x] Celery task `meta_token_health_check` — hourly beat; probes `/me` with the decrypted token, flags expired / errored connections and stamps `last_error` / `last_health_check_at`.
+- [x] Token encryption at rest — Fernet via new `crypto.py` (`TOKEN_ENCRYPTION_KEY` env, dev fallback derived from `JWT_SECRET`); plaintext never persisted and never returned in API responses.
 
 ## Phase 3 — Storefront (Connectors)
 - [ ] Resolve TDD.md:192 open question: shared Shelf service vs. re-auth. Decide before build.

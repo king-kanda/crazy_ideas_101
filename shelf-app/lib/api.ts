@@ -476,4 +476,59 @@ export const api = {
       generatedAt: (raw.generatedAt ?? new Date().toISOString()) as string,
     };
   },
+
+  // ── Meta integrations (Phase 2) ─────────────────────────────────────
+  metaStatus: async (token: string): Promise<MetaStatusResponse> => {
+    return apiFetch<MetaStatusResponse>('/integrations/meta/status', { authToken: token });
+  },
+
+  metaEsCallback: async (
+    token: string,
+    payload: {
+      platform: 'whatsapp' | 'instagram' | 'facebook';
+      code: string;
+      metaBusinessId?: string;
+      metaAccountId?: string;
+      displayName?: string;
+    },
+  ): Promise<MetaConnectionStatus> => {
+    return apiFetch<MetaConnectionStatus>('/integrations/meta/es-callback', {
+      method: 'POST',
+      authToken: token,
+      body: JSON.stringify({
+        platform: payload.platform,
+        code: payload.code,
+        meta_business_id: payload.metaBusinessId,
+        meta_account_id: payload.metaAccountId,
+        display_name: payload.displayName,
+      }),
+    });
+  },
+
+  metaDisconnect: async (
+    token: string,
+    platform: 'whatsapp' | 'instagram' | 'facebook',
+  ): Promise<{ platform: string; disconnected: boolean }> => {
+    return apiFetch<{ platform: string; disconnected: boolean }>(
+      `/integrations/meta/${platform}`,
+      { method: 'DELETE', authToken: token },
+    );
+  },
 };
+
+// ── Meta integrations response types ─────────────────────────────────
+
+export interface MetaConnectionStatus {
+  platform: 'whatsapp' | 'instagram' | 'facebook';
+  connected: boolean;
+  status: 'active' | 'expired' | 'revoked' | 'error' | 'not_connected';
+  display_name?: string | null;
+  meta_account_id?: string | null;
+  token_expires_at?: string | null;
+  last_health_check_at?: string | null;
+  last_error?: string | null;
+}
+
+export interface MetaStatusResponse {
+  connections: MetaConnectionStatus[];
+}

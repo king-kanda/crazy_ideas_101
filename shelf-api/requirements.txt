@@ -11,6 +11,8 @@ python-dotenv
 pydantic[email]
 python-jose[cryptography]
 passlib[argon2,bcrypt]
+cryptography
+httpx
 gunicorn
 psycopg2-binary
 pytest

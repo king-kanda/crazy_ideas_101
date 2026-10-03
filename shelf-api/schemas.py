@@ -251,3 +251,44 @@ class ActivityInsights(BaseModel):
     daily: List[DailyActivity]
     peak_hours: List[str]
     avg_daily_users: float
+
+
+# ── Meta Integrations ─────────────────────────────────────────────────────────
+
+class MetaESCallbackRequest(BaseModel):
+    """Payload posted by the frontend after Embedded Signup completes.
+
+    `code` is the auth code Meta's SDK hands back; the backend exchanges it
+    for a long-lived token. `platform` is one of 'whatsapp' | 'instagram' |
+    'facebook'. `meta_account_id` is the waba_id / ig_user_id / page_id the
+    merchant selected inside the ES popup.
+    """
+    platform: str
+    code: str
+    meta_business_id: Optional[str] = None
+    meta_account_id: Optional[str] = None
+    display_name: Optional[str] = None
+
+
+class MetaConnectionStatus(BaseModel):
+    platform: str
+    connected: bool
+    status: str  # "active" | "expired" | "revoked" | "error" | "not_connected"
+    display_name: Optional[str] = None
+    meta_account_id: Optional[str] = None
+    token_expires_at: Optional[datetime] = None
+    last_health_check_at: Optional[datetime] = None
+    last_error: Optional[str] = None
+
+
+class MetaStatusResponse(BaseModel):
+    connections: List[MetaConnectionStatus]
+
+
+class MetaDisconnectResponse(BaseModel):
+    platform: str
+    disconnected: bool
+
+
+class WebhookAck(BaseModel):
+    received: bool = True

@@ -93,6 +93,75 @@ class Store(Base):
     trend_cache = relationship("TrendCache", back_populates="store", cascade="all, delete-orphan")
 
 
+class MetaConnection(Base):
+    """One row per (workspace, platform) Meta Embedded Signup connection.
+
+    `access_token_encrypted` holds a Fernet-wrapped long-lived token; it must
+    never be returned in an API response. `status` is 'active' | 'expired' |
+    'revoked' | 'error'. Platform is 'whatsapp' | 'instagram' | 'facebook'.
+    """
+    __tablename__ = "meta_connections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    platform = Column(Text, nullable=False)
+    meta_business_id = Column(Text, nullable=True)
+    meta_account_id = Column(Text, nullable=True, index=True)  # waba_id / ig_user_id / page_id
+    display_name = Column(Text, nullable=True)
+    access_token_encrypted = Column(Text, nullable=False)
+    token_expires_at = Column(DateTime, nullable=True)
+    scopes = Column(JSON, nullable=True)
+    status = Column(Text, default="active", index=True)
+    last_health_check_at = Column(DateTime, nullable=True)
+    last_error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    subscriptions = relationship("WebhookSubscription", back_populates="connection", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "platform", name="uq_meta_workspace_platform"),
+    )
+
+
+class WebhookSubscription(Base):
+    __tablename__ = "webhook_subscriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    connection_id = Column(UUID(as_uuid=True), ForeignKey("meta_connections.id", ondelete="CASCADE"), nullable=False, index=True)
+    topic = Column(Text, nullable=False)  # e.g. "messages", "message_echoes", "comments"
+    status = Column(Text, default="subscribed")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    connection = relationship("MetaConnection", back_populates="subscriptions")
+
+    __table_args__ = (
+        UniqueConstraint("connection_id", "topic", name="uq_webhook_connection_topic"),
+    )
+
+
+class WebhookEvent(Base):
+    """Idempotency log + raw-payload buffer for Meta webhooks.
+
+    `event_id` is the dedupe key (Meta's message/change id). The receiver
+    writes the row and enqueues Celery; the worker picks up by `id`.
+    """
+    __tablename__ = "webhook_events"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    platform = Column(Text, nullable=False, index=True)
+    event_id = Column(Text, nullable=False, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    payload = Column(JSON, nullable=False)
+    received_at = Column(DateTime, default=datetime.utcnow, index=True)
+    processed_at = Column(DateTime, nullable=True)
+    status = Column(Text, default="pending", index=True)  # pending | processed | failed
+
+    __table_args__ = (
+        UniqueConstraint("platform", "event_id", name="uq_webhook_event_dedupe"),
+    )
+
+
 class Product(Base):
     __tablename__ = "products"
 

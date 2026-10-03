@@ -12,6 +12,10 @@ celery.conf.beat_schedule = {
         'task': 'workers.trends.fetch_trends_all_stores',
         'schedule': 86400.0,  # daily
     },
+    'meta-token-health-check': {
+        'task': 'workers.meta_events.meta_token_health_check',
+        'schedule': 3600.0,  # hourly
+    },
 }
 
 celery.conf.timezone = 'UTC'
