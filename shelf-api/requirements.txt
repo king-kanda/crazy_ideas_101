@@ -10,7 +10,7 @@ groq
 python-dotenv
 pydantic[email]
 python-jose[cryptography]
-passlib[bcrypt]
+passlib[argon2,bcrypt]
 gunicorn
 psycopg2-binary
 pytest

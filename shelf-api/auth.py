@@ -1,11 +1,11 @@
 import os
 import secrets
-import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Request, HTTPException, status
 from jose import jwt, JWTError
+from passlib.context import CryptContext
 from sqlalchemy import select
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -22,13 +22,34 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 # ── Password hashing ─────────────────────────────────────────────
+# Argon2 is the default; bcrypt is kept for verifying legacy hashes written
+# before the migration. Successful logins against a bcrypt hash should be
+# rehashed by the caller (see `password_needs_rehash`).
+
+_pwd_context = CryptContext(
+    schemes=["argon2", "bcrypt"],
+    deprecated=["bcrypt"],
+    default="argon2",
+)
+
 
 def hash_password(plain: str) -> str:
-    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+    return _pwd_context.hash(plain)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
+    try:
+        return _pwd_context.verify(plain, hashed)
+    except (ValueError, TypeError):
+        return False
+
+
+def password_needs_rehash(hashed: str) -> bool:
+    """True when `hashed` was produced by a deprecated scheme (bcrypt)."""
+    try:
+        return _pwd_context.needs_update(hashed)
+    except (ValueError, TypeError):
+        return False
 
 
 # ── JWT ──────────────────────────────────────────────────────────

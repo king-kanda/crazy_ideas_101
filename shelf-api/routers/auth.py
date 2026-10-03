@@ -16,7 +16,7 @@ from schemas import (
     WorkspaceMeResponse, OAuthRequest,
 )
 from auth import (
-    hash_password, verify_password, create_jwt, decode_jwt,
+    hash_password, verify_password, password_needs_rehash, create_jwt, decode_jwt,
     get_store_from_api_key, get_store_from_jwt,
     get_merchant_from_jwt, get_workspace_from_jwt,
     new_opaque_token, reset_token_expiry, limiter,
@@ -102,6 +102,9 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
     ).scalars().first()
 
     if merchant_row and merchant_row.password_hash and verify_password(body.password, merchant_row.password_hash):
+        if password_needs_rehash(merchant_row.password_hash):
+            merchant_row.password_hash = hash_password(body.password)
+            await db.commit()
         workspace = (
             await db.execute(select(Workspace).where(Workspace.merchant_id == merchant_row.id))
         ).scalars().first()
@@ -145,6 +148,12 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
         merchant = (
             await db.execute(select(Merchant).where(Merchant.email == body.email))
         ).scalars().first()
+        if password_needs_rehash(store.owner_password_hash):
+            new_hash = hash_password(body.password)
+            store.owner_password_hash = new_hash
+            if merchant:
+                merchant.password_hash = new_hash
+            await db.commit()
         merchant_id = str(merchant.id) if merchant else str(workspace_id)
         token = create_jwt(
             merchant_id=merchant_id,

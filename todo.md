@@ -36,7 +36,7 @@ Palette (from `shelf-app/.claude/designer/SKILL.md`, mirrored in `CLAUDE.md`): b
   - [x] OAuth setup docs at `shelf-app/docs/google-oauth.md`; env template in `.env.local.example`.
   - [x] Account-linking: matching-email Google sign-in attaches an `oauth_accounts` row to the existing merchant instead of erroring.
 - [x] **Auth screen redesign** — `/login` + `/signup` now use a shared split-panel `AuthShell` (ink marketing panel + lime mark on the left, form on the right, password show/hide toggle), rendered in the Palda palette (flat, no gradients/purple/pill buttons per the design system).
-- [ ] Argon2 hashing (currently bcrypt — TDD allows either; upgrade later).
+- [x] Argon2 hashing — passlib `CryptContext(["argon2","bcrypt"], deprecated=["bcrypt"])`. Legacy bcrypt hashes are verified and rehashed to Argon2 on successful login (both `merchants.password_hash` and legacy `stores.owner_password_hash`).
 - [ ] Password reset email delivery (transactional — deferred per PRD "no email in MVP"; token surfaced in dev logs for now).
 
 ## Phase 2 — ES Login (Meta Embedded Signup)
