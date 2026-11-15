@@ -49,13 +49,13 @@ Palette (from `shelf-app/.claude/designer/SKILL.md`, mirrored in `CLAUDE.md`): b
 - [x] Token encryption at rest — Fernet via new `crypto.py` (`TOKEN_ENCRYPTION_KEY` env, dev fallback derived from `JWT_SECRET`); plaintext never persisted and never returned in API responses.
 
 ## Phase 3 — Storefront (Connectors)
-- [ ] Resolve TDD.md:192 open question: shared Shelf service vs. re-auth. Decide before build.
-- [ ] Tables: `stores`, `products`, `orders`, `sync_jobs` scoped to `workspace_id`.
-- [ ] Extend WooCommerce plugin/ingest to include orders + stock levels + variants.
-- [ ] Endpoints: `POST /integrations/woocommerce/connect`, `GET /integrations/woocommerce/status`, `POST /integrations/woocommerce/resync`, `GET /catalog/products`, `GET /orders`.
-- [ ] Celery: initial full sync + incremental sync via WC webhooks; polling fallback for cheap hosts.
-- [ ] Debounced "Re-sync now" button.
-- [ ] Frontend: catalog view + orders view (read-only), sync health panel.
+- [x] TDD open question resolved: **re-authenticate independently**. The plugin owns the integration, keyed by the Store's `api_key` via the existing `X-Shelf-API-Key` header. No "shared Shelf service" exists — the shared-service option in TDD.md:192 referenced an earlier architecture.
+- [x] Tables: `orders` (idempotent on `(store_id, wc_order_id)`), `order_items`, `sync_jobs` (per-run status) added; `products` gained `stock_quantity`; `stores` gained `resync_requested_at` + `last_sync_at`. All workspace-denormalised for fast tenant queries.
+- [x] API ingest surface: `POST /ingest/orders` (upserts order + replaces line items wholesale, writes a `sync_jobs` row), `POST /ingest/stock` (patches stock_status/quantity on existing products).
+- [x] Dashboard endpoints: `GET /integrations/woocommerce/status` (connection health, counts, last 5 sync jobs), `POST /integrations/woocommerce/resync` (debounced 60s, flips `resync_requested_at`), `GET /integrations/woocommerce/resync-flag` (plugin poll, X-Shelf-API-Key), `GET /products` and `GET /orders` (workspace-scoped, paginated, order filter).
+- [x] Frontend: `/dashboard/catalog` and `/dashboard/orders` read-only paginated tables; `/dashboard/integrations/woocommerce` sync health + "Re-sync now" button with client + server debounce; sidebar entries un-"soon".
+- [ ] **Plugin follow-up (shelf-woocommerce/):** wire `woocommerce_new_order` + `woocommerce_order_status_changed` → `POST /ingest/orders`; `woocommerce_product_set_stock` + `woocommerce_variation_set_stock` → `POST /ingest/stock`; cron poll `GET /integrations/woocommerce/resync-flag` and run a full push when the timestamp advances. Variants/attributes expansion also pending.
+- [ ] Celery incremental-sync task (polling fallback for stores where WC webhooks are unreliable on shared hosting) — deferred until plugin webhook support lands.
 
 ## Phase 4 — KB (Knowledge Base)
 - [ ] Provision Qdrant; add embedding provider (OpenRouter/Gemini per TDD.md:52).

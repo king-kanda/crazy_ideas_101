@@ -159,3 +159,118 @@ async def ingest_activity(
 
     await db.commit()
     return {"upserted": upserted}
+
+
+# ── Phase 3: orders + stock ingest (plugin → API, X-Shelf-API-Key) ──
+
+from sqlalchemy import delete  # noqa: E402
+
+from models import Order, OrderItem, SyncJob  # noqa: E402
+from schemas import IngestOrdersRequest, IngestStockRequest  # noqa: E402
+
+
+@router.post("/orders", response_model=Dict[str, Any])
+async def ingest_orders(
+    body: IngestOrdersRequest,
+    store: Store = Depends(get_store_from_api_key),
+    db: AsyncSession = Depends(get_db),
+):
+    job = SyncJob(
+        store_id=store.id,
+        workspace_id=store.workspace_id,
+        kind="orders",
+        status="running",
+    )
+    db.add(job)
+    await db.flush()
+
+    upserted = 0
+    for incoming in body.orders:
+        existing = (
+            await db.execute(
+                select(Order).where(
+                    Order.store_id == store.id,
+                    Order.wc_order_id == incoming.wc_order_id,
+                )
+            )
+        ).scalars().first()
+
+        order_created_at = incoming.order_created_at.replace(tzinfo=None) if incoming.order_created_at else None
+
+        if existing:
+            existing.status = incoming.status
+            existing.currency = incoming.currency
+            existing.total = incoming.total
+            existing.customer_email = incoming.customer_email
+            existing.customer_name = incoming.customer_name
+            existing.order_created_at = order_created_at
+            existing.synced_at = datetime.utcnow()
+            # replace items wholesale — WC is source of truth
+            await db.execute(delete(OrderItem).where(OrderItem.order_id == existing.id))
+            await db.flush()
+            order_id = existing.id
+        else:
+            order = Order(
+                store_id=store.id,
+                workspace_id=store.workspace_id,
+                wc_order_id=incoming.wc_order_id,
+                status=incoming.status,
+                currency=incoming.currency,
+                total=incoming.total,
+                customer_email=incoming.customer_email,
+                customer_name=incoming.customer_name,
+                order_created_at=order_created_at,
+                is_demo=body.is_demo,
+            )
+            db.add(order)
+            await db.flush()
+            order_id = order.id
+
+        for item in incoming.items:
+            db.add(OrderItem(
+                order_id=order_id,
+                wc_product_id=item.wc_product_id,
+                product_name=item.product_name,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                line_total=item.line_total,
+            ))
+        upserted += 1
+
+    job.status = "completed"
+    job.records_processed = upserted
+    job.finished_at = datetime.utcnow()
+    store.last_sync_at = datetime.utcnow()
+
+    await db.commit()
+    return {"upserted": upserted, "job_id": str(job.id)}
+
+
+@router.post("/stock", response_model=Dict[str, Any])
+async def ingest_stock(
+    body: IngestStockRequest,
+    store: Store = Depends(get_store_from_api_key),
+    db: AsyncSession = Depends(get_db),
+):
+    updated = 0
+    for item in body.items:
+        product = (
+            await db.execute(
+                select(Product).where(
+                    Product.store_id == store.id,
+                    Product.wc_product_id == item.wc_product_id,
+                )
+            )
+        ).scalars().first()
+        if not product:
+            continue
+        if item.stock_status is not None:
+            product.stock_status = item.stock_status
+        if item.stock_quantity is not None:
+            product.stock_quantity = item.stock_quantity
+        product.synced_at = datetime.utcnow()
+        updated += 1
+
+    store.last_sync_at = datetime.utcnow()
+    await db.commit()
+    return {"updated": updated}

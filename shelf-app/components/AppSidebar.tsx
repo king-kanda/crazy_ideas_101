@@ -67,8 +67,8 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Storefront',
     items: [
-      { label: 'Catalog', href: '/dashboard/catalog', icon: Package, soon: true },
-      { label: 'Orders', href: '/dashboard/orders', icon: ShoppingCart, soon: true },
+      { label: 'Catalog', href: '/dashboard/catalog', icon: Package },
+      { label: 'Orders', href: '/dashboard/orders', icon: ShoppingCart },
       { label: 'Knowledge Base', href: '/dashboard/kb', icon: BookOpen, soon: true },
     ],
   },

@@ -17,7 +17,9 @@ from routers.ingest import router as ingest_router
 from routers.insights import router as insights_router
 from routers.labs import router as labs_router
 from routers.integrations_meta import router as integrations_meta_router
+from routers.integrations_woocommerce import router as integrations_wc_router
 from routers.webhooks import router as webhooks_router
+from routers.catalog import router as catalog_router
 
 
 @asynccontextmanager
@@ -50,7 +52,9 @@ app.include_router(ingest_router, prefix="/ingest", tags=["Ingest"])
 app.include_router(insights_router, prefix="/insights", tags=["Insights"])
 app.include_router(labs_router, prefix="/labs", tags=["Labs"])
 app.include_router(integrations_meta_router, prefix="/integrations/meta", tags=["Integrations: Meta"])
+app.include_router(integrations_wc_router, prefix="/integrations/woocommerce", tags=["Integrations: WooCommerce"])
 app.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
+app.include_router(catalog_router, tags=["Catalog & Orders"])
 
 
 @app.get("/health", tags=["Health"])

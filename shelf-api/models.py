@@ -82,6 +82,8 @@ class Store(Base):
     api_key = Column(Text, unique=True, nullable=False)
     plugin_site_url = Column(Text, nullable=True)
     demo_loaded = Column(Boolean, default=False)
+    resync_requested_at = Column(DateTime, nullable=True)
+    last_sync_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     workspace = relationship("Workspace", back_populates="stores")
@@ -172,11 +174,71 @@ class Product(Base):
     category = Column(Text)
     price = Column(Numeric(10, 2))
     stock_status = Column(Text)
+    stock_quantity = Column(Integer, nullable=True)
     is_demo = Column(Boolean, default=False)
     synced_at = Column(DateTime, default=datetime.utcnow)
 
     store = relationship("Store", back_populates="products")
     cart_events = relationship("CartEvent", back_populates="product")
+
+
+class Order(Base):
+    """WooCommerce order mirror. Keyed by (store_id, wc_order_id) so re-ingest
+    is idempotent. `workspace_id` is denormalised for query speed on the
+    tenant-scoped read endpoints.
+    """
+    __tablename__ = "orders"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    store_id = Column(UUID(as_uuid=True), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    wc_order_id = Column(Integer, nullable=False)
+    status = Column(Text, nullable=False, index=True)  # pending|processing|completed|cancelled|refunded|failed
+    currency = Column(Text, nullable=True)
+    total = Column(Numeric(12, 2), nullable=True)
+    customer_email = Column(Text, nullable=True)
+    customer_name = Column(Text, nullable=True)
+    order_created_at = Column(DateTime, nullable=True, index=True)
+    is_demo = Column(Boolean, default=False)
+    synced_at = Column(DateTime, default=datetime.utcnow)
+
+    store = relationship("Store")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("store_id", "wc_order_id", name="uq_order_store_wc_id"),
+    )
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    wc_product_id = Column(Integer, nullable=True)
+    product_name = Column(Text, nullable=False)
+    quantity = Column(Integer, default=1)
+    unit_price = Column(Numeric(12, 2), nullable=True)
+    line_total = Column(Numeric(12, 2), nullable=True)
+
+    order = relationship("Order", back_populates="items")
+
+
+class SyncJob(Base):
+    """One row per sync run (initial-full or incremental). Lets the dashboard
+    show when the last sync happened and whether it succeeded.
+    """
+    __tablename__ = "sync_jobs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    store_id = Column(UUID(as_uuid=True), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False, index=True)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
+    kind = Column(Text, nullable=False)  # "products" | "orders" | "stock" | "full"
+    status = Column(Text, nullable=False, default="pending", index=True)  # pending|running|completed|failed
+    records_processed = Column(Integer, default=0)
+    error = Column(Text, nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow, index=True)
+    finished_at = Column(DateTime, nullable=True)
 
 
 class SearchEvent(Base):

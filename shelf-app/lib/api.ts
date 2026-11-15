@@ -514,7 +514,90 @@ export const api = {
       { method: 'DELETE', authToken: token },
     );
   },
+
+  // ── WooCommerce integration (Phase 3) ───────────────────────────────
+  wcStatus: async (token: string): Promise<WooCommerceStatus> =>
+    apiFetch<WooCommerceStatus>('/integrations/woocommerce/status', { authToken: token }),
+
+  wcResync: async (token: string): Promise<{ accepted: boolean; resync_requested_at: string }> =>
+    apiFetch<{ accepted: boolean; resync_requested_at: string }>(
+      '/integrations/woocommerce/resync',
+      { method: 'POST', authToken: token },
+    ),
+
+  listProducts: async (token: string, limit = 50, offset = 0): Promise<ProductsPage> =>
+    apiFetch<ProductsPage>(`/products?limit=${limit}&offset=${offset}`, { authToken: token }),
+
+  listOrders: async (token: string, limit = 50, offset = 0, status?: string): Promise<OrdersPage> => {
+    const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (status) q.set('status', status);
+    return apiFetch<OrdersPage>(`/orders?${q}`, { authToken: token });
+  },
 };
+
+// ── Phase 3 response types ───────────────────────────────────────────
+
+export interface WooCommerceStatus {
+  connected: boolean;
+  store_url?: string | null;
+  plugin_site_url?: string | null;
+  last_sync_at?: string | null;
+  resync_requested_at?: string | null;
+  product_count: number;
+  order_count: number;
+  recent_jobs: Array<{
+    kind: string;
+    status: string;
+    started_at: string | null;
+    finished_at: string | null;
+    records_processed: number;
+    error: string | null;
+  }>;
+}
+
+export interface ProductRow {
+  id: string;
+  wc_product_id: number;
+  name: string;
+  category?: string | null;
+  price?: number | null;
+  stock_status?: string | null;
+  stock_quantity?: number | null;
+  synced_at: string;
+}
+
+export interface ProductsPage {
+  items: ProductRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface OrderItemRow {
+  product_name: string;
+  quantity: number;
+  unit_price?: number | null;
+  line_total?: number | null;
+}
+
+export interface OrderRow {
+  id: string;
+  wc_order_id: number;
+  status: string;
+  currency?: string | null;
+  total?: number | null;
+  customer_email?: string | null;
+  customer_name?: string | null;
+  order_created_at?: string | null;
+  items: OrderItemRow[];
+}
+
+export interface OrdersPage {
+  items: OrderRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
 
 // ── Meta integrations response types ─────────────────────────────────
 

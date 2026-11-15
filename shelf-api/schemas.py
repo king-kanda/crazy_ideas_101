@@ -292,3 +292,99 @@ class MetaDisconnectResponse(BaseModel):
 
 class WebhookAck(BaseModel):
     received: bool = True
+
+
+# ── Phase 3: Storefront (WooCommerce) ─────────────────────────────────────────
+
+class IngestOrderItem(BaseModel):
+    wc_product_id: Optional[int] = None
+    product_name: str
+    quantity: int = 1
+    unit_price: Optional[float] = None
+    line_total: Optional[float] = None
+
+
+class IngestOrder(BaseModel):
+    wc_order_id: int
+    status: str
+    currency: Optional[str] = None
+    total: Optional[float] = None
+    customer_email: Optional[str] = None
+    customer_name: Optional[str] = None
+    order_created_at: Optional[datetime] = None
+    items: List[IngestOrderItem] = []
+
+
+class IngestOrdersRequest(BaseModel):
+    orders: List[IngestOrder]
+    is_demo: bool = False
+
+
+class IngestStockItem(BaseModel):
+    wc_product_id: int
+    stock_status: Optional[str] = None
+    stock_quantity: Optional[int] = None
+
+
+class IngestStockRequest(BaseModel):
+    items: List[IngestStockItem]
+
+
+class WooCommerceStatus(BaseModel):
+    connected: bool
+    store_url: Optional[str] = None
+    plugin_site_url: Optional[str] = None
+    last_sync_at: Optional[datetime] = None
+    resync_requested_at: Optional[datetime] = None
+    product_count: int = 0
+    order_count: int = 0
+    recent_jobs: list = []  # list of {kind,status,started_at,finished_at,records_processed,error}
+
+
+class ResyncResponse(BaseModel):
+    accepted: bool
+    resync_requested_at: datetime
+
+
+class ProductRow(BaseModel):
+    id: UUID4
+    wc_product_id: int
+    name: str
+    category: Optional[str] = None
+    price: Optional[float] = None
+    stock_status: Optional[str] = None
+    stock_quantity: Optional[int] = None
+    synced_at: datetime
+
+
+class ProductsPage(BaseModel):
+    items: List[ProductRow]
+    total: int
+    limit: int
+    offset: int
+
+
+class OrderItemRow(BaseModel):
+    product_name: str
+    quantity: int
+    unit_price: Optional[float] = None
+    line_total: Optional[float] = None
+
+
+class OrderRow(BaseModel):
+    id: UUID4
+    wc_order_id: int
+    status: str
+    currency: Optional[str] = None
+    total: Optional[float] = None
+    customer_email: Optional[str] = None
+    customer_name: Optional[str] = None
+    order_created_at: Optional[datetime] = None
+    items: List[OrderItemRow] = []
+
+
+class OrdersPage(BaseModel):
+    items: List[OrderRow]
+    total: int
+    limit: int
+    offset: int

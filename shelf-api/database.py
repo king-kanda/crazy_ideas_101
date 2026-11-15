@@ -46,6 +46,10 @@ async def init_db():
             # OAuth: merchants created via Google sign-in have no local password.
             "ALTER TABLE merchants ALTER COLUMN password_hash DROP NOT NULL",
             "ALTER TABLE stores ALTER COLUMN owner_password_hash DROP NOT NULL",
+            # Phase 3: storefront sync
+            "ALTER TABLE stores ADD COLUMN IF NOT EXISTS resync_requested_at TIMESTAMP",
+            "ALTER TABLE stores ADD COLUMN IF NOT EXISTS last_sync_at TIMESTAMP",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER",
         ]
         for sql in migrations:
             await conn.execute(text(sql))
